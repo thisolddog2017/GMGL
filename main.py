@@ -11,6 +11,9 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger(__name__)
 
+def start(update, context):
+    """Send a message when the command /start is issued."""
+    update.message.reply_text("Yes, I'm listening.")
 
 def help_command(update, context):
     """Send a message when the command /help is issued."""
@@ -53,6 +56,7 @@ def main():
     dp = updater.dispatcher
 
     # on different commands - answer in Telegram
+    dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help_command))
 
     # on noncommand i.e morning news to process
