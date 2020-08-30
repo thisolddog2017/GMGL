@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, logging, traceback
+import os, logging, traceback, random
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -20,14 +20,25 @@ def help_command(update, context):
 def bless_image(update, context):
     """Echo the user message."""
     try:
-        update.message.reply_text("Good Morning...")
         post, news_items = regex_read.parse(
             update.message.text
         )
+        update.message.reply_text("Good Morning...")
         out_path = generate.generate_image(post, news_items)
         update.message.reply_photo(open(out_path, 'rb'), caption="...and Good Luck!")
+    except regex_read.InvalidContent:
+        logger.info("Failed to parse content: %r", update.message.text)
+        reply = random.choice([
+            "You're not being serious with me, are you?",
+            "My dad says when I grow up one day... then I might understand what you mean.",
+            "No time to waste here, my dear."
+        ])
+        update.message.reply_text(
+            "{}\n\n(Your text format looks wrong, try /help)".format(reply)
+        )
     except Exception as e:
-        update.message.reply_text("Sh*t happened... Please ask for my dad. Here's what I was chewing on:\n\n{}\n\n{}".format(e, traceback.format_exc()))
+        logger.exception("Error when handling message: %r", update.message.text)
+        update.message.reply_text("Sh*t happened... Please ask for my dad. Here's what I was chewing on:\n\n{}".format(traceback.format_exc()))
 
 def main():
     import sys

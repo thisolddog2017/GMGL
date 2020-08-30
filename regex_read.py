@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Format of the input
-===================
+Input Format
+============
 
 <MM>.<DD>
 
@@ -9,22 +9,19 @@ Format of the input
 
 sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vestibulum sed arcu non odio euismod. At elementum eu facilisis sed. Vehicula ipsum a arcu cursus vitae congue. Purus gravida quis blandit turpis.
 
-2. Lorem ipsum dolor sit amet, consectetur adipiscing elit
+2. Sed nisi lacus sed viverra
 
-sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vestibulum sed arcu non odio euismod. At elementum eu facilisis sed. Vehicula ipsum a arcu cursus vitae congue. Purus gravida quis blandit turpis.
+Porta lorem mollis aliquam ut porttitor leo. Eu sem integer vitae justo eget magna fermentum iaculis. Tincidunt dui ut ornare lectus sit amet est placerat in. Nulla porttitor massa id neque. Orci ac auctor augue mauris augue neque. Nunc aliquet bibendum enim facilisis. Nulla porttitor massa id neque aliquam. Aenean euismod elementum nisi quis eleifend quam adipiscing vitae proin. Nisl nunc mi ipsum faucibus.
 
-3. Lorem ipsum dolor sit amet, consectetur adipiscing elit
+3. Et molestie ac feugiat sed lectus vestibulum mattis ullamcorper velit
 
-sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vestibulum sed arcu non odio euismod. At elementum eu facilisis sed. Vehicula ipsum a arcu cursus vitae congue. Purus gravida quis blandit turpis.
-
-4. Lorem ipsum dolor sit amet, consectetur adipiscing elit
-
-sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vestibulum sed arcu non odio euismod. At elementum eu facilisis sed. Vehicula ipsum a arcu cursus vitae congue. Purus gravida quis blandit turpis.
+Pellentesque pulvinar pellentesque habitant morbi tristique. A diam sollicitudin tempor id eu nisl nunc mi. Et ligula ullamcorper malesuada proin libero nunc consequat interdum. Ipsum dolor sit amet consectetur adipiscing elit pellentesque habitant. Duis convallis convallis tellus id interdum velit laoreet id. Tellus elementum sagittis vitae et leo duis ut. Vitae et leo duis ut. Ultrices neque ornare aenean euismod elementum nisi quis. Viverra adipiscing at in tellus integer feugiat scelerisque.
 
 NOTE
 ====
 
-* the <month>.<day> can be omitted, in which case the current date in UTC+8 is used
+* <MM>.<DD> can be omitted, in which case the current date in UTC+8 is used
+* each bullet starts with a number and a period followed by a single space - do not use Chinese punctuations!
 * paragraphs don't support newlines at the moment
 """
 
@@ -32,6 +29,12 @@ import re
 from NewsItem import NewsItem
 
 itempat = re.compile(r'([0-9]+). ([^\r\n]+)[\r\n]+([^\r\n]+)')
+
+class InvalidContent(ValueError):
+    pass
+
+class NoItems(InvalidContent):
+    pass
 
 def parse(content):
     '''Read from content string and extract the list of news
@@ -69,7 +72,7 @@ def parse(content):
     ]
     # TODO use better interface to handle date / category etc. parameters
     if not items:
-        raise ValueError("No news items detected, check your input!")
+        raise NoItems()
     for i in items:
         i.category = 'all'
 
