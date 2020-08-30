@@ -95,26 +95,6 @@ def read_post_and_news_items_from_excel():
     import excel_read
     return excel_read.excel_data(data, sheet_index)
 
-def read_post_and_news_items_from_regex(content, date=None):
-    '''content : the content string, in the standard format of that on telegram
-    date : if None, use current date in UTC+8 (China)
-    '''
-    if not date:
-        from datetime import datetime, timezone, timedelta
-        date = datetime.today().replace(tzinfo=timezone.utc).astimezone(tz=timezone(timedelta(hours=8)))
-    from NewsPost import NewsPost
-    post = NewsPost()
-    # TODO use better interface to handle date / category etc. parameters
-    post.date = date
-    post.category_list = ['all']
-    import regex_read
-    items = regex_read.read_news_items(content)
-    if not items:
-        raise ValueError("No news items detected, check your input!")
-    for i in items:
-        i.category = 'all'
-    return post, items
-
 def generate_image(post, news_item_list):
     '''post : a NewsPost
     news_items : list of NewsItem
@@ -149,7 +129,6 @@ def generate_image(post, news_item_list):
             image_category(category_image_path, append_temp_dir('category'+str(idx)+'.temp.png'), category_xy, cfg["category_font_name"], cfg["category_font_color"], cfg["category_font_size"], post.category_list[idx])
             images.append(append_temp_dir('category'+str(idx)+'.temp.png'))
         for i in range(len(news_item_list)):
-            print(i)
             if news_item_list[i].category == post.category_list[idx]:
                 if news_item_list[i].title != '':
                     text_to_image.image_generate_from_text(news_item_list[i].title, append_temp_dir("news_content.category"+str(idx)+".title"+str(i)+".temp.png"), news_item_title_cfg, post_cfg)
@@ -253,7 +232,8 @@ if __name__ == "__main__":
     try:
         print("Good morning!")
         import sys
-        post, news_items = read_post_and_news_items_from_regex(
+        import regex_read
+        post, news_items = regex_read.parse(
             sys.stdin.read()
         )
         out_path = generate_image(post, news_items)
