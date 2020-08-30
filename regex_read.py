@@ -31,7 +31,7 @@ NOTE
 import re
 from NewsItem import NewsItem
 
-itempat = re.compile(r'([0-9]+). ([^\n]+)\n\n([^\n]+)')
+itempat = re.compile(r'([0-9]+). ([^\r\n]+)[\r\n]+([^\r\n]+)')
 
 def parse(content):
     '''Read from content string and extract the list of news
