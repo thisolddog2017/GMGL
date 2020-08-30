@@ -1,2 +1,3 @@
-*.png
-*.jpg
+out/
+temp/
+__pycache__/
