@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging, traceback
+import os, logging, traceback
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -7,7 +7,7 @@ import regex_read, generate
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+                    level=os.environ.get('LOGLEVEL', 'INFO').upper())
 
 logger = logging.getLogger(__name__)
 
