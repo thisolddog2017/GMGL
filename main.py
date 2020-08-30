@@ -3,7 +3,6 @@ import os
 import re
 from PIL import Image, ImageFont, ImageDraw
 import datetime
-import excel_read
 import text_to_image
 import configparser
 import traceback
@@ -21,8 +20,7 @@ cfg = {
     "category": config.get('path', 'category'),
     "footer": config.get('path', 'footer'),
     "temp_dir": config.get('path', 'temp_dir'),
-    "data": config.get('path', 'data'),
-    "sheet_index": config.getint('path', 'sheet_index'),
+    "out_dir": config.get('path', 'out_dir'),
 
     "date_enabled": config.getboolean('date', 'enabled'),
     "date_font_name": config.get('date', 'font-name'),
@@ -89,8 +87,80 @@ news_url_cfg = {
 header_image_path=(os.path.join(post_cfg['images_dir'], cfg['header']))
 category_image_path=(os.path.join(post_cfg['images_dir'], cfg['category']))
 footer_image_path=(os.path.join(post_cfg['images_dir'], cfg['footer']))
+
+
+def read_post_and_news_items_from_excel():
+    '''NOTE: assumes that the relevant configs & modules are present'''
+    # data=data.xls
+    # sheet_index=-1
+    data = config.get('path', 'data')
+    sheet_index = config.getint('path', 'sheet_index')
+    import excel_read
+    return excel_read.excel_data(data, sheet_index)
+
+
+def generate_image(post, news_items):
+    '''post : a NewsPost
+    news_items : list of NewsItem
+
+    returns the path to output image, if success
+    '''
+    try:
+        for p in [cfg['temp_dir'], cfg['out']]:
+            if not os.path.exists(p):
+                os.makedirs(p)
+        shutil.copyfile(header_image_path,append_temp_dir("header.temp.png"))
+        if cfg['date_enabled']:
+            header_date_square_xy = align_center_in_box(date_text, cfg["date_font_name"], cfg["date_font_size"], cfg["date_square_xy"], cfg["date_square_width"], cfg["date_square_height"])
+            timestamping(append_temp_dir("header.temp.png"), append_temp_dir("header.temp.png"), header_date_square_xy, cfg["date_font_name"], cfg["date_font_color"], cfg["date_font_size"], date_text)
+        if cfg['day_of_the_week_enabled']:
+            header_dow_xy = align_center_in_context(weekday_dict[post.day_of_the_week], cfg["day_of_the_week_font_name"], cfg["day_of_the_week_font_size"], cfg["date_font_name"], cfg["date_font_size"], header_date_square_xy, date_text, cfg["date_line_height"])
+            timestamping(append_temp_dir("header.temp.png"), append_temp_dir("header.temp.png"), header_dow_xy, cfg["day_of_the_week_font_name"], cfg["day_of_the_week_font_color"], cfg["day_of_the_week_font_size"], weekday_dict[post.day_of_the_week])
+        if (cfg['issue_number_enabled']) & (post.issue_number != 0):
+            issue_number_text = "第"+str(post.issue_number)+"期"
+            header_issue_number_xy = align_center_in_context(issue_number_text, cfg["issue_number_font_name"], cfg["issue_number_font_size"], cfg["day_of_the_week_font_name"], cfg["day_of_the_week_font_size"], header_dow_xy, weekday_dict[post.day_of_the_week], cfg["date_line_height"])
+            timestamping(append_temp_dir("header.temp.png"), append_temp_dir("header.temp.png"), header_issue_number_xy, cfg["issue_number_font_name"], cfg["issue_number_font_color"], cfg["issue_number_font_size"], issue_number_text)
+        images.append(append_temp_dir("header.temp.png"))
+
+        for idx in range(len(post.category_list)) :
+            if cfg['category_enabled'] and post.category_list!=['all']:
+                category_xy = align_center_in_box(post.category_list[idx], cfg["category_font_name"], cfg["category_font_size"], cfg["category_square_xy"], cfg["category_square_width"], cfg["category_square_height"])
+                image_category(category_image_path, append_temp_dir('category'+str(idx)+'.temp.png'), category_xy, cfg["category_font_name"], cfg["category_font_color"], cfg["category_font_size"], post.category_list[idx])
+                images.append(append_temp_dir('category'+str(idx)+'.temp.png'))
+            for i in range(len(news_item_list)):
+                if news_item_list[i].category == post.category_list[idx]:
+                    if news_item_list[i].title != '':
+                        text_to_image.image_generate_from_text(news_item_list[i].title, append_temp_dir("news_content.category"+str(idx)+".title"+str(i)+".temp.png"), news_item_title_cfg, post_cfg)
+                        images.append(append_temp_dir("news_content.category"+str(idx)+".title"+str(i)+".temp.png"))
+                    if news_item_list[i].content != '':
+                        text_to_image.image_generate_from_text(news_item_list[i].content, append_temp_dir("news_content.category"+str(idx)+".content"+str(i)+".temp.png"), news_item_content_cfg, post_cfg)
+                        images.append(append_temp_dir("news_content.category"+str(idx)+".content"+str(i)+".temp.png"))
+                    if news_item_list[i].url != '' and news_url_cfg["url_enabled"]:
+                        text_to_image.image_generate_from_text(news_item_list[i].url, append_temp_dir("news_content.category"+str(idx)+".url"+str(i)+".temp.png"), news_url_cfg, post_cfg)
+                        images.append(append_temp_dir("news_content.category"+str(idx)+".url"+str(i)+".temp.png"))
+
+        images.append(footer_image_path)
+        out_path = "{}/早报{}.png".format(
+            cfg['out_dir'],
+            post.date.strftime("%Y.%m.%d")+'.png'),
+            cfg['quality']
+        )
+        image_combine(
+            images,
+            out_path
+        )
+        # cleaning
+        for image in images:
+            if "temp" in image:
+                os.remove(image)
+        os.rmdir(cfg['temp_dir'])
+        return out_path
+    except Exception as e:
+        print(repr(e))
+        traceback.print_tb(e.__traceback__)
+        input()
+
 #dict, post.category_list
-post, news_item_list = excel_read.excel_data(cfg['data'], cfg['sheet_index'])
 #date_text = dict['date'].strftime('%Y{0}%m{1}%d{2}').format(*'年月日')
 date_text = post.date.strftime(cfg['date_format']).format(*'年月日').replace('X0','X').replace('X','')
 images = []
@@ -168,49 +238,8 @@ def append_temp_dir(path):
     return os.path.join(cfg['temp_dir'], path)
 
 if __name__ == "__main__":
-    print("Morning Post Generator")
-    print("====Build 20200829====\n")
-    try:
-        if not os.path.exists(cfg['temp_dir']):
-            os.makedirs(cfg['temp_dir'])    
-        shutil.copyfile(header_image_path,append_temp_dir("header.temp.png"))
-        if cfg['date_enabled']:
-            header_date_square_xy = align_center_in_box(date_text, cfg["date_font_name"], cfg["date_font_size"], cfg["date_square_xy"], cfg["date_square_width"], cfg["date_square_height"])
-            timestamping(append_temp_dir("header.temp.png"), append_temp_dir("header.temp.png"), header_date_square_xy, cfg["date_font_name"], cfg["date_font_color"], cfg["date_font_size"], date_text)
-        if cfg['day_of_the_week_enabled']:
-            header_dow_xy = align_center_in_context(weekday_dict[post.day_of_the_week], cfg["day_of_the_week_font_name"], cfg["day_of_the_week_font_size"], cfg["date_font_name"], cfg["date_font_size"], header_date_square_xy, date_text, cfg["date_line_height"])
-            timestamping(append_temp_dir("header.temp.png"), append_temp_dir("header.temp.png"), header_dow_xy, cfg["day_of_the_week_font_name"], cfg["day_of_the_week_font_color"], cfg["day_of_the_week_font_size"], weekday_dict[post.day_of_the_week])
-        if (cfg['issue_number_enabled']) & (post.issue_number != 0):
-            issue_number_text = "第"+str(post.issue_number)+"期"
-            header_issue_number_xy = align_center_in_context(issue_number_text, cfg["issue_number_font_name"], cfg["issue_number_font_size"], cfg["day_of_the_week_font_name"], cfg["day_of_the_week_font_size"], header_dow_xy, weekday_dict[post.day_of_the_week], cfg["date_line_height"])
-            timestamping(append_temp_dir("header.temp.png"), append_temp_dir("header.temp.png"), header_issue_number_xy, cfg["issue_number_font_name"], cfg["issue_number_font_color"], cfg["issue_number_font_size"], issue_number_text)
-        images.append(append_temp_dir("header.temp.png"))
-
-        for idx in range(len(post.category_list)) :
-            if cfg['category_enabled'] and post.category_list!=['all']:
-                category_xy = align_center_in_box(post.category_list[idx], cfg["category_font_name"], cfg["category_font_size"], cfg["category_square_xy"], cfg["category_square_width"], cfg["category_square_height"])
-                image_category(category_image_path, append_temp_dir('category'+str(idx)+'.temp.png'), category_xy, cfg["category_font_name"], cfg["category_font_color"], cfg["category_font_size"], post.category_list[idx])
-                images.append(append_temp_dir('category'+str(idx)+'.temp.png'))
-            for i in range(len(news_item_list)):
-                if news_item_list[i].category == post.category_list[idx]:
-                    if news_item_list[i].title != '':
-                        text_to_image.image_generate_from_text(news_item_list[i].title, append_temp_dir("news_content.category"+str(idx)+".title"+str(i)+".temp.png"), news_item_title_cfg, post_cfg)
-                        images.append(append_temp_dir("news_content.category"+str(idx)+".title"+str(i)+".temp.png"))
-                    if news_item_list[i].content != '':
-                        text_to_image.image_generate_from_text(news_item_list[i].content, append_temp_dir("news_content.category"+str(idx)+".content"+str(i)+".temp.png"), news_item_content_cfg, post_cfg)
-                        images.append(append_temp_dir("news_content.category"+str(idx)+".content"+str(i)+".temp.png"))
-                    if news_item_list[i].url != '' and news_url_cfg["url_enabled"]:
-                        text_to_image.image_generate_from_text(news_item_list[i].url, append_temp_dir("news_content.category"+str(idx)+".url"+str(i)+".temp.png"), news_url_cfg, post_cfg)
-                        images.append(append_temp_dir("news_content.category"+str(idx)+".url"+str(i)+".temp.png"))
-
-        images.append(footer_image_path)
-        image_combine(images, "早报"+post.date.strftime("%Y.%m.%d")+'.png', cfg['quality'])
-        # cleaning
-        for image in images:
-            if "temp" in image:
-                os.remove(image)
-        os.rmdir(cfg['temp_dir'])
-    except Exception as e:
-        print(repr(e))
-        traceback.print_tb(e.__traceback__)
-        input()
+    print("Good morning!")
+    post, news_items = read_post_and_news_items_from_excel()
+    out_path = generate_image(post, news_items)
+    print("...and Good luck!")
+    print(out_path)
