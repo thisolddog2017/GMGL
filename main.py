@@ -3,7 +3,7 @@ import os, logging, traceback, random
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-import regex_read, generate
+import regex_read, generate, formats
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -23,10 +23,29 @@ def help_command(update, context):
 def bless_image(update, context):
     """Echo the user message."""
     try:
-        post, news_items = regex_read.parse(
-            update.message.text
-        )
+        input = update.message.text
+        # do a global formatting first
+        corrected = []
+        for f, name in [ (formats.format_punctuations, "punctuations"),
+                         (formats.format_numbers, "numbers") ]:
+            input1 = f(input)
+            if input1 != input:
+                input = input1
+                corrected.append(name)
+
+        post, news_items = regex_read.parse(input)
+
         update.message.reply_text("Good Morning...")
+        if corrected:
+            update.message.reply_text(
+                "I see you are not being careful with {} - so I've corrected it for you:".format(
+                    ' and '.join(
+                        x for x in [', '.join(corrected[:-1]), corrected[-1]] if x
+                    )
+                )
+            )
+            update.message.reply_text(input)
+
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
     except regex_read.InvalidContent:
