@@ -28,7 +28,7 @@ def bless_image(update, context):
         )
         update.message.reply_text("Good Morning...")
         out_path = generate.generate_image(post, news_items)
-        update.message.reply_photo(open(out_path, 'rb'), caption="...and Good Luck!")
+        update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
     except regex_read.InvalidContent:
         logger.info("Failed to parse content: %r", update.message.text)
         reply = random.choice([
