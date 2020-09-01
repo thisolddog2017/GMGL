@@ -27,7 +27,7 @@ def bless_image(update, context):
         # do a global formatting first
         corrected = []
         for f, name in [ (formats.format_punctuations, "punctuations"),
-                         (formats.format_numbers, "numbers") ]:
+                         (formats.format_numbers, "numbers / English") ]:
             input1 = f(input)
             if input1 != input:
                 input = input1
