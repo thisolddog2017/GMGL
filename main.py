@@ -40,6 +40,7 @@ def bless_image(update, context):
                 corrected.append(name)
 
         post, news_items = regex_read.parse(input)
+        formatted = regex_read.lay_out(post, news_items)
 
         update.message.reply_text("Good Morning...")
         if corrected:
@@ -50,7 +51,7 @@ def bless_image(update, context):
                     )
                 )
             )
-            update.message.reply_text(input)
+            update.message.reply_text(formatted)
 
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
