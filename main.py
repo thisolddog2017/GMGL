@@ -58,7 +58,7 @@ def bless_image(update, context):
         logger.info("[%r] Failed to parse content: %r", update.message.chat.first_name, update.message.text)
         reply = random.choice([
             "You're not being serious with me, are you?",
-            "My dad says when I grow up one day... then I might understand what you mean.",
+            "Big Brother says when I grow up one day... I might understand what you mean.",
             "No time to waste here, my dear."
         ])
         update.message.reply_text(
@@ -66,7 +66,7 @@ def bless_image(update, context):
         )
     except Exception as e:
         logger.exception("Error when handling message: %r", update.message.text)
-        update.message.reply_text("Sh*t happened... Please ask for my dad. Here's what I was chewing on:\n\n{}".format(traceback.format_exc()))
+        update.message.reply_text("Sh*t happened... Please ask for Big Brother. Here's what I was chewing on:\n\n{}".format(traceback.format_exc()))
 
 def main():
     import sys
