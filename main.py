@@ -51,7 +51,9 @@ def bless_image(update, context):
                     )
                 )
             )
-            update.message.reply_text(formatted)
+        else:
+            update.message.reply_text("Bravo! You've made no mistakes that I can spot. In any case, here's the well formatted piece:")
+        update.message.reply_text(formatted)
 
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
