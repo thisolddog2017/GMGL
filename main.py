@@ -20,6 +20,12 @@ def help_command(update, context):
     # TODO support more commands
     update.message.reply_text(regex_read.__doc__)
 
+def mk_notify_command(group_id):
+    def notify(update, context):
+        msg = ' '.join(context.args)
+        update.message.bot.send_message(group_id, msg)
+    return notify
+
 def bless_image(update, context):
     """Echo the user message."""
     try:
@@ -65,6 +71,7 @@ def bless_image(update, context):
 def main():
     import sys
     token = sys.argv[1]
+    group_id = sys.argv[2]
 
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
@@ -77,6 +84,9 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help_command))
+
+    # hidden switches
+    dp.add_handler(CommandHandler("notify", mk_notify_command(group_id)))
 
     # on noncommand i.e morning news to process
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, bless_image))
