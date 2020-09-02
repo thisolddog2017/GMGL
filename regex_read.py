@@ -28,7 +28,13 @@ NOTE
 import re
 from NewsItem import NewsItem
 
-itempat = re.compile(r'([0-9]+). ([^\r\n]+)[\r\n]+([^\r\n]+)')
+bullet_start = r'([0-9]+)\. '
+newlines_or_whitespace = r'[\r\n]+[\r\n\s]*'
+itempat = re.compile(r'{}([^\r\n]+){}((?:(?!{})[^\r\n])+)?'.format(
+    bullet_start,
+    newlines_or_whitespace,
+    bullet_start
+), flags=re.MULTILINE)
 
 class InvalidContent(ValueError):
     pass
@@ -67,7 +73,10 @@ def parse(content):
     # group(2): title
     # group(3): content
     items = [
-        NewsItem('{}. {}'.format(i, m.group(2)), m.group(3))
+        NewsItem(
+            '{}. {}'.format(i, m.group(2) or '').strip(),
+            (m.group(3) or '').strip()
+        )
         for i, m in enumerate(itempat.finditer(content), start=1)
     ]
     # TODO use better interface to handle date / category etc. parameters
@@ -77,3 +86,13 @@ def parse(content):
         i.category = 'all'
 
     return post, items
+
+def lay_out(post, items):
+    '''Layout the parsed content in the standard text form'''
+    lines = ['{} N记早报'.format(post.date.strftime('%-m.%-d'))]
+    for i in items:
+        if i.title:
+            lines.append(i.title)
+        if i.content:
+            lines.append(i.content)
+    return '\n\n'.join(lines)

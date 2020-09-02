@@ -7,7 +7,7 @@ def format_punctuations(s):
             .replace('『', '“') \
             .replace('』', '”')
 
-non_punct = r'[^\n\p{P}0-9a-zA-Z]' # \p{P} for punctuations
+non_punct = r'[^\s\p{P}0-9a-zA-Z]' # \p{P} for punctuations
 num_or_en = r'[0-9][0-9.]*%?|[a-zA-Z]+'
 pre_space_pat = re.compile(r'(?<={}) *({})'.format(non_punct, num_or_en))
 aft_space_pat = re.compile(r'({}) *(?={})'.format(num_or_en, non_punct))

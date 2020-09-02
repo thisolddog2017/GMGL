@@ -49,7 +49,7 @@ def bless_image(update, context):
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
     except regex_read.InvalidContent:
-        logger.info("Failed to parse content: %r", update.message.text)
+        logger.info("[%r] Failed to parse content: %r", update.message.chat.first_name, update.message.text)
         reply = random.choice([
             "You're not being serious with me, are you?",
             "My dad says when I grow up one day... then I might understand what you mean.",
