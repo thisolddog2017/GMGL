@@ -28,7 +28,7 @@ NOTE
 import re
 from NewsItem import NewsItem
 
-bullet_start = r'([0-9]+)[.、][ ]?(.*?)(?<!。)$'
+bullet_start = r'([0-9]+)[.、][ ]?(.*?)(?<![.。])$'
 newlines_or_whitespace = r'[\r\n]+[\r\n\s]*'
 itempat = re.compile(r'{}{}((?:(?!{})[^\r\n])+)?'.format(
     bullet_start,
