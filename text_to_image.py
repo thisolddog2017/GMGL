@@ -180,18 +180,18 @@ def makeMatrix(txt, font, text_cfg, img_cfg):
     return data
 
 
-def makeImage(data, img_cfg):
-    """
-    """
+# def makeImage(data, img_cfg):
+#     """
+#     """
 
-    width, height = data["width"], data["height"]
-    im = Image.new("RGB", (width, height), img_cfg["background_color"])
-    dr = ImageDraw.Draw(im)
+#     width, height = data["width"], data["height"]
+#     im = Image.new("RGB", (width, height), img_cfg["background_color"])
+#     dr = ImageDraw.Draw(im)
 
-    for ln_idx, line in enumerate(data["lines"]):
-        __makeLine(im, line, img_cfg)
+#     for ln_idx, line in enumerate(data["lines"]):
+#         __makeLine(im, line, img_cfg)
 
-    return im
+#     return im
 
 
 
