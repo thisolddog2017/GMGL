@@ -22,7 +22,7 @@ def help_command(update, context):
 
 def mk_notify_command(group_id):
     def notify(update, context):
-        msg = ' '.join(context.args)
+        msg = update.message.text.split(' ', maxsplit=1)[-1].strip()
         update.message.bot.send_message(group_id, msg)
     return notify
 
