@@ -240,7 +240,7 @@ def draw_text(data, text_cfg, img_cfg):
         font = line["font"]
         p = re.compile(r'([\u4e00-\u9fa5])')
         str_list = p.split(line["text"])
-        words = [w for w in str_list if len(w.strip()) > 0]
+        words = [w for w in str_list if len(w.strip("\r\n\t\f")) > 0]
         
         if (ln_idx == len(data["lines"]) - 1) or            len(words) == 1:
             draw.text((x, y), line["text"], fill=text_cfg["font_color"], font=font)
@@ -276,5 +276,31 @@ def paste_pattern(im, pattern_im):
     return im
 
 if __name__ == "__main__":
-    image_generate("test.txt", "test.png", True)
+    import configparser
+    # Load configuration
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    post_cfg = {
+    "images_dir": config.get('path', 'images_dir'),
+    "fonts_dir": config.get('path', 'fonts_dir'),
+    "width": config.getint('general', 'width'),
+    "pattern_enabled": config.getboolean('pattern', 'enabled'),
+    "pattern": config.get('path', 'pattern'),
+    "padding": tuple(eval(config.get('general', 'padding'))),
+    "background_color": tuple(eval(config.get('general', 'background-color'))),
+    "break_word": config.getboolean('general', 'break-word')
+    }
+    news_item_title_cfg = {
+        "line_height": config.getint('news_title', 'line-height'),
+        "font_size": config.getint('news_title', 'font-size'),
+        "font_family": config.get('news_title', 'font-family'),
+        "font_color": tuple(eval(config.get('news_title', 'font-color')))
+    }
+    news_item_content_cfg = {
+        "line_height": config.getint('news_content', 'line-height'),
+        "font_size": config.getint('news_content', 'font-size'),
+        "font_family": config.get('news_content', 'font-family'),
+        "font_color": tuple(eval(config.get('news_content', 'font-color')))
+    }
+    image_generate("test.txt", "test.png", news_item_title_cfg, post_cfg, True)
 
