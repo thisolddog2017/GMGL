@@ -95,9 +95,10 @@ def read_post_and_news_items_from_excel():
     import excel_read
     return excel_read.excel_data(data, sheet_index)
 
-def generate_image(post, news_item_list):
+def generate_image(post, news_item_list, out_path=None):
     '''post : a NewsPost
     news_items : list of NewsItem
+    out_path : if not specified, use default path
 
     returns the path to output image, if success
     '''
@@ -141,10 +142,11 @@ def generate_image(post, news_item_list):
                     images.append(append_temp_dir("news_content.category"+str(idx)+".url"+str(i)+".temp.png"))
 
     images.append(footer_image_path)
-    out_path = "{}/早报{}.png".format(
-        cfg['out_dir'],
-        post.date.strftime("%Y.%m.%d")
-    )
+    if out_path is None:
+        out_path = "{}/早报{}.png".format(
+            cfg['out_dir'],
+            post.date.strftime("%Y.%m.%d")
+        )
     image_combine(
         images,
         out_path,
