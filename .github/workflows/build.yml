@@ -3,7 +3,8 @@ name: Python CI
 
 on:
   push:
-  pull_request:
+  # See https://github.community/t/github-workflow-not-running-from-pull-request-from-forked-repository/16379/48
+  pull_request_target:
 
 jobs:
   build:
