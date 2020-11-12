@@ -240,7 +240,7 @@ def draw_text(data, text_cfg, img_cfg):
         font = line["font"]
         p = re.compile(r'([\u4e00-\u9fa5])')
         str_list = p.split(line["text"])
-        words = [w for w in str_list if len(w.strip()) > 0]
+        words = [w for w in str_list if len(w.strip("\r\n\t\f")) > 0]
         
         if (ln_idx == len(data["lines"]) - 1) or            len(words) == 1:
             draw.text((x, y), line["text"], fill=text_cfg["font_color"], font=font)
