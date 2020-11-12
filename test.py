@@ -26,8 +26,10 @@ def open_input_outputs(base_dir, out_ext=None, in_mode='r', out_mode='r'):
     """
     for f in os.listdir(os.path.join(base_dir, 'input')):
         name, ext = os.path.splitext(f)
+        o_ext = out_ext or ext
         with open(os.path.join(base_dir, 'input', f), in_mode) as i, \
-             open(os.path.join(base_dir, 'out', name + (out_ext or ext)), out_mode) as o:
+             open(os.path.join(base_dir, 'out', name + o_ext), out_mode) as o:
+            print('{}{{{},{}}}'.format(name, ext, o_ext))
             yield i, o
 
 def full_format(t):
@@ -62,4 +64,4 @@ if __name__ == '__main__':
         for i, o in open_input_outputs(test_img_dir, '.png', out_mode='wb'):
             gen_image(i.read(), o.name)
     else:
-        unittest.main()
+        unittest.main(verbosity=2)

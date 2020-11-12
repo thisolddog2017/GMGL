@@ -30,6 +30,7 @@ def bless_image(update, context):
     """Echo the user message."""
     try:
         input = update.message.text
+        logger.info("[%r] %r", update.message.chat.first_name, update.message.text)
         # do a global formatting first
         corrected = []
         for f, name in [ (formats.format_punctuations, "punctuations"),
@@ -58,7 +59,7 @@ def bless_image(update, context):
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
     except regex_read.InvalidContent:
-        logger.info("[%r] Failed to parse content: %r", update.message.chat.first_name, update.message.text)
+        logger.warn("[%r] Failed to parse content: %r", update.message.chat.first_name, update.message.text)
         reply = random.choice([
             "You're not being serious with me, are you?",
             "Big Brother says when I grow up one day... I might understand what you mean.",
