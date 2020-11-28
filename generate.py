@@ -135,8 +135,10 @@ def generate_image(post, news_item_list, out_path=None):
                     text_to_image.image_generate_from_text(news_item_list[i].title, append_temp_dir("news_content.category"+str(idx)+".title"+str(i)+".temp.png"), news_item_title_cfg, post_cfg)
                     images.append(append_temp_dir("news_content.category"+str(idx)+".title"+str(i)+".temp.png"))
                 if news_item_list[i].content != '':
-                    text_to_image.image_generate_from_text(news_item_list[i].content, append_temp_dir("news_content.category"+str(idx)+".content"+str(i)+".temp.png"), news_item_content_cfg, post_cfg)
-                    images.append(append_temp_dir("news_content.category"+str(idx)+".content"+str(i)+".temp.png"))
+                    for ln_idx, ln in enumerate(news_item_list[i].content.splitlines()):
+                        if ln:
+                            text_to_image.image_generate_from_text(ln, append_temp_dir("news_content.category"+str(idx)+".content"+str(i)+'.'+str(ln_idx)+".temp.png"), news_item_content_cfg, post_cfg)
+                            images.append(append_temp_dir("news_content.category"+str(idx)+".content"+str(i)+'.'+str(ln_idx)+".temp.png"))
                 if news_item_list[i].url != '' and news_url_cfg["url_enabled"]:
                     text_to_image.image_generate_from_text(news_item_list[i].url, append_temp_dir("news_content.category"+str(idx)+".url"+str(i)+".temp.png"), news_url_cfg, post_cfg)
                     images.append(append_temp_dir("news_content.category"+str(idx)+".url"+str(i)+".temp.png"))
