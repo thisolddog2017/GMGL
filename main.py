@@ -64,15 +64,10 @@ def bless_image(update, context):
 
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
-    except regex_read.InvalidContent:
-        logger.warn("[%r] Failed to parse content: %r", update.message.chat.first_name, update.message.text)
-        reply = random.choice([
-            "You're not being serious with me, are you?",
-            "Big Brother says when I grow up one day... I might understand what you mean.",
-            "No time to waste here, my dear."
-        ])
-        update.message.reply_text(
-            "{}\n\n(Your text format looks wrong, try /help)".format(reply)
+    except regex_read.InvalidContent as e:
+        logger.warn("[%r] Failed to parse content: %s\n%r", update.message.chat.first_name, e, update.message.text)
+        update.message.reply_markdown_v2(
+            "{}\n\\(關於輸入格式，見 /help\\)".format(e)
         )
     except Exception as e:
         logger.exception("Error when handling message: %r", update.message.text)
