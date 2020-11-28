@@ -3,7 +3,7 @@ import os, logging, traceback, random
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-import text_read, generate, formats
+import text_read, generate, text_process
 
 help="""
 [早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
@@ -39,8 +39,8 @@ def bless_image(update, context):
         logger.info("[%r] %r", update.message.chat.first_name, update.message.text)
         # do a global formatting first
         corrected = []
-        for f, name in [ (formats.format_punctuations, "punctuations"),
-                         (formats.format_numbers, "numbers / English") ]:
+        for f, name in [ (text_process.format_punctuations, "punctuations"),
+                         (text_process.format_numbers, "numbers / English") ]:
             input1 = f(input)
             if input1 != input:
                 input = input1

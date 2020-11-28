@@ -1,14 +1,14 @@
 import unittest, os, tempfile
-import text_read, generate, formats
+import text_read, generate, text_process
 
 test_dir = 'test'
 
-test_format_dir = os.path.join(test_dir, 'format')
+test_text_dir = os.path.join(test_dir, 'text')
 test_img_dir = os.path.join(test_dir, 'img')
 
 def apply_parsed(func, t):
-    for f in [ formats.format_punctuations,
-               formats.format_numbers ]:
+    for f in [ text_process.format_punctuations,
+               text_process.format_numbers ]:
       t = f(t)
     post, news_items = text_read.parse(t)
     return func(post, news_items)
@@ -32,7 +32,7 @@ def open_input_outputs(base_dir, out_ext=None, in_mode='r', out_mode='r'):
             print('{}{{{},{}}}'.format(name, ext, o_ext))
             yield i, o
 
-def full_format(t):
+def full_text_process(t):
     return apply_parsed(text_read.lay_out, t)
 
 def gen_image(t, out_path):
@@ -41,12 +41,12 @@ def gen_image(t, out_path):
         t
     )
 
-class TestFormatting(unittest.TestCase):
+class TestTextProcess(unittest.TestCase):
     maxDiff = None
 
     def test_samples(self):
-        for i, o in open_input_outputs(test_format_dir):
-            self.assertEqual(full_format(i.read()), o.read())
+        for i, o in open_input_outputs(test_text_dir):
+            self.assertEqual(full_text_process(i.read()), o.read())
 
 class TestImages(unittest.TestCase):
     def test_samples(self):
@@ -58,8 +58,8 @@ class TestImages(unittest.TestCase):
 if __name__ == '__main__':
     import sys
     if sys.argv[1:] == ['gen']:
-        for i, o in open_input_outputs(test_format_dir, out_mode='w'):
-            o.write(full_format(i.read()))
+        for i, o in open_input_outputs(test_text_dir, out_mode='w'):
+            o.write(full_text_process(i.read()))
 
         for i, o in open_input_outputs(test_img_dir, '.png', out_mode='wb'):
             gen_image(i.read(), o.name)

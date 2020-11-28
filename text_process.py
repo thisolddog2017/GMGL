@@ -5,7 +5,8 @@ def format_punctuations(s):
     return s.replace('「', '“') \
             .replace('」', '”') \
             .replace('『', '“') \
-            .replace('』', '”')
+            .replace('』', '”') \
+            .replace('丶', '、')
 
 non_punct = r'[^\s\p{P}0-9a-zA-Z]' # \p{P} for punctuations
 num_or_en = r'[0-9][0-9.]*%?|[a-zA-Z]+'
