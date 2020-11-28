@@ -5,6 +5,12 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 import regex_read, generate, formats
 
+help="""
+[早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
+[Wiki](https://github.com/thisolddog2017/GMGL-pub/wiki)
+[報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
+"""
+
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=os.environ.get('LOGLEVEL', 'INFO').upper())
@@ -18,7 +24,7 @@ def start(update, context):
 def help_command(update, context):
     """Send a message when the command /help is issued."""
     # TODO support more commands
-    update.message.reply_text(regex_read.__doc__)
+    update.message.reply_markdown_v2(help)
 
 def mk_notify_command(group_id):
     def notify(update, context):

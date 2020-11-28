@@ -1,28 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Input Format
-============
-
-<MM>.<DD>
-
-1. Lorem ipsum dolor sit amet, consectetur adipiscing elit
-
-sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vestibulum sed arcu non odio euismod. At elementum eu facilisis sed. Vehicula ipsum a arcu cursus vitae congue. Purus gravida quis blandit turpis.
-
-2. Sed nisi lacus sed viverra
-
-Porta lorem mollis aliquam ut porttitor leo. Eu sem integer vitae justo eget magna fermentum iaculis. Tincidunt dui ut ornare lectus sit amet est placerat in. Nulla porttitor massa id neque. Orci ac auctor augue mauris augue neque. Nunc aliquet bibendum enim facilisis. Nulla porttitor massa id neque aliquam. Aenean euismod elementum nisi quis eleifend quam adipiscing vitae proin. Nisl nunc mi ipsum faucibus.
-
-3. Et molestie ac feugiat sed lectus vestibulum mattis ullamcorper velit
-
-Pellentesque pulvinar pellentesque habitant morbi tristique. A diam sollicitudin tempor id eu nisl nunc mi. Et ligula ullamcorper malesuada proin libero nunc consequat interdum. Ipsum dolor sit amet consectetur adipiscing elit pellentesque habitant. Duis convallis convallis tellus id interdum velit laoreet id. Tellus elementum sagittis vitae et leo duis ut. Vitae et leo duis ut. Ultrices neque ornare aenean euismod elementum nisi quis. Viverra adipiscing at in tellus integer feugiat scelerisque.
-
-NOTE
-====
-
-* <MM>.<DD> can be omitted, in which case the current date in UTC+8 is used
-* each bullet starts with a number and a period followed by a single space - do not use Chinese punctuations!
-* paragraphs don't support newlines at the moment
+早報輸入格式: https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F
 """
 
 import re
