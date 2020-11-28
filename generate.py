@@ -236,8 +236,8 @@ if __name__ == "__main__":
     try:
         print("Good morning!")
         import sys
-        import regex_read
-        post, news_items = regex_read.parse(
+        import text_read
+        post, news_items = text_read.parse(
             sys.stdin.read()
         )
         out_path = generate_image(post, news_items)

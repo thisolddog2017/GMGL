@@ -1,5 +1,5 @@
 import unittest, os, tempfile
-import regex_read, generate, formats
+import text_read, generate, formats
 
 test_dir = 'test'
 
@@ -10,7 +10,7 @@ def apply_parsed(func, t):
     for f in [ formats.format_punctuations,
                formats.format_numbers ]:
       t = f(t)
-    post, news_items = regex_read.parse(t)
+    post, news_items = text_read.parse(t)
     return func(post, news_items)
 
 def open_input_outputs(base_dir, out_ext=None, in_mode='r', out_mode='r'):
@@ -33,7 +33,7 @@ def open_input_outputs(base_dir, out_ext=None, in_mode='r', out_mode='r'):
             yield i, o
 
 def full_format(t):
-    return apply_parsed(regex_read.lay_out, t)
+    return apply_parsed(text_read.lay_out, t)
 
 def gen_image(t, out_path):
     return apply_parsed(

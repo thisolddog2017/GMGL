@@ -3,7 +3,7 @@ import os, logging, traceback, random
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-import regex_read, generate, formats
+import text_read, generate, formats
 
 help="""
 [早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
@@ -46,8 +46,8 @@ def bless_image(update, context):
                 input = input1
                 corrected.append(name)
 
-        post, news_items = regex_read.parse(input)
-        formatted = regex_read.lay_out(post, news_items)
+        post, news_items = text_read.parse(input)
+        formatted = text_read.lay_out(post, news_items)
 
         update.message.reply_text("Good Morning...")
         if corrected:
@@ -64,7 +64,7 @@ def bless_image(update, context):
 
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
-    except regex_read.InvalidContent as e:
+    except text_read.InvalidContent as e:
         logger.warn("[%r] Failed to parse content: %s\n%r", update.message.chat.first_name, e, update.message.text)
         update.message.reply_markdown_v2(
             "{}\n\\(關於輸入格式，見 /help\\)".format(e)
