@@ -32,7 +32,7 @@ def mk_notify_command(group_id):
         update.message.bot.send_message(group_id, msg)
     return notify
 
-def bless_image(update, context):
+def morning_news(update, context):
     """Echo the user message."""
     try:
         input = update.message.text
@@ -60,7 +60,7 @@ def bless_image(update, context):
             )
         else:
             update.message.reply_text("Bravo! You've made no mistakes that I can spot. Here's the well formatted piece:")
-        update.message.reply_text(formatted)
+        update.message.reply_markdown_v2('```\n{}\n```'.format(formatted))
 
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
@@ -94,7 +94,7 @@ def main():
     dp.add_handler(CommandHandler("notify", mk_notify_command(group_id)))
 
     # on noncommand i.e morning news to process
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, bless_image))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, morning_news))
 
     # Start the Bot
     updater.start_polling()
