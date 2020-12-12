@@ -126,48 +126,7 @@ def mk_button(group_id, chat_instance_id):
     return button
 
 def morning_news(update, context):
-    """Echo the user message."""
-    try:
-        input = update.message.text
-        logger.info("[%r] %r", update.message.chat.first_name, update.message.text)
-        # do a global formatting first
-        corrected = []
-        for f, name in [ (text_process.format_punctuations, "標點"),
-                         (text_process.format_numbers, "數字英文") ]:
-            input1 = f(input)
-            if input1 != input:
-                input = input1
-                corrected.append(name)
-
-        post, news_items = text_read.parse(input)
-        formatted = text_read.lay_out(post, news_items)
-
-        update.message.reply_text("Good Morning...")
-        if corrected:
-            update.message.reply_text(
-                "發現{}小錯，糾正如下，下次努力".format(
-                    '和'.join(
-                        x for x in ['、'.join(corrected[:-1]), corrected[-1]] if x
-                    )
-                )
-            )
-        else:
-            update.message.reply_text("Bravo! 沒發現錯誤，排版後如下")
-        update.message.reply_markdown_v2(
-            '```\n{}\n```'.format(formatted),
-            reply_markup=InlineKeyboardMarkup.from_button(InlineKeyboardButton("發佈"))
-        )
-
-        out_path = generate.generate_image(post, news_items)
-        update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
-    except text_read.InvalidContent as e:
-        logger.warn("[%r] Failed to parse content: %s\n%r", update.message.chat.first_name, e, update.message.text)
-        update.message.reply_markdown_v2(
-            "{}\n\\(關於輸入格式，見 /help\\)".format(e)
-        )
-    except Exception as e:
-        logger.exception("Error when handling message: %r", update.message.text)
-        update.message.reply_text("Sh*t happened... Please ask for Big Brother. Here's what I was chewing on:\n\n{}".format(traceback.format_exc()))
+    update.message.reply_text("早報處理已升級爲聊天輸入框內操作，具體請見 /help")
 
 def main():
     import sys
@@ -194,7 +153,7 @@ def main():
 
     # on noncommand i.e morning news to process
     # TODO deprecate
-    # dp.add_handler(MessageHandler(Filters.text & ~Filters.command, morning_news))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, morning_news))
 
     # Start the Bot
     updater.start_polling()
