@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import os, logging, traceback, random
+from uuid import uuid4
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, InlineQueryHandler, CallbackQueryHandler
+from telegram import InlineQueryResultArticle, ParseMode, InputTextMessageContent
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 import text_read, generate, text_process
 
@@ -10,6 +13,13 @@ help="""
 [Wiki](https://github.com/thisolddog2017/GMGL-pub/wiki)
 [報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
 """
+
+formatting_option_id = uuid4()
+morning_news_option_id = uuid4()
+morning_news_publish_prefix = "mnpub"
+
+# State
+morning_news_parsed = dict() # { uuid -> (post, items) }
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -32,6 +42,89 @@ def mk_notify_command(group_id):
         update.message.bot.send_message(group_id, msg)
     return notify
 
+def inlinequery(update, context):
+    query = update.inline_query.query
+    processed_query = query
+    # try to parse the content on the go
+    for f in [
+        text_process.format_punctuations,
+        text_process.format_numbers
+    ]:
+        processed_query = f(processed_query)
+
+
+    results = [
+        InlineQueryResultArticle(
+            id=formatting_option_id,
+            title="格式化",
+            input_message_content=InputTextMessageContent(processed_query)),
+    ]
+
+    # morning news
+    try:
+        post, news_items = text_read.parse(processed_query)
+        morning_news_formatted = '```\n{}\n```'.format(text_read.lay_out(post, news_items))
+        morning_news_id = str(uuid4())
+        morning_news_pub_callback_data = '{}.{}'.format(morning_news_publish_prefix, morning_news_id)
+        morning_news_parsed[morning_news_id] = (post, news_items)
+        results.append(
+            InlineQueryResultArticle(
+                id=morning_news_option_id,
+                title="早報",
+                input_message_content=InputTextMessageContent(
+                    morning_news_formatted,
+                    parse_mode=ParseMode.MARKDOWN_V2
+                ),
+                reply_markup=InlineKeyboardMarkup.from_button(InlineKeyboardButton(
+                    "發佈",
+                    callback_data=morning_news_pub_callback_data
+                ))
+            ),
+        )
+    except text_read.InvalidContent as e:
+        morning_news_error = "原文\n```\n{}\n```\n{}\n\\(關於輸入格式，見 /help\\)".format(query, e)
+        results.append(
+            InlineQueryResultArticle(
+                id=morning_news_option_id,
+                title="早報（輸入格式不符，點擊察看詳情）",
+                input_message_content=InputTextMessageContent(
+                    morning_news_error,
+                    parse_mode=ParseMode.MARKDOWN_V2
+                )
+            )
+        )
+
+    update.inline_query.answer(results)
+
+def mk_button(group_id, chat_instance_id):
+    def button(update, context):
+        query = update.callback_query
+        if query.data.startswith(morning_news_publish_prefix):
+            morning_news_id = query.data[len(morning_news_publish_prefix)+1:]
+            # TODO not found in dict
+            post, news_items = morning_news_parsed[morning_news_id]
+
+            text = text_read.lay_out(post, news_items)
+            # check room
+            if query.chat_instance == chat_instance_id:
+                out_path = generate.generate_image(post, news_items)
+
+                query.bot.send_document(group_id, open(out_path, 'rb'))
+                # update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
+                query.edit_message_text(
+                    "*已發佈*\n\n```\n{}\n```".format(text),
+                    parse_mode=ParseMode.MARKDOWN_V2
+                )
+            else:
+                query.edit_message_text(
+                    "*該房间無發佈權限*\n\n```\n{}\n```".format(text),
+                    parse_mode=ParseMode.MARKDOWN_V2
+                )
+
+
+        query.answer()
+    return button
+
 def morning_news(update, context):
     """Echo the user message."""
     try:
@@ -39,8 +132,8 @@ def morning_news(update, context):
         logger.info("[%r] %r", update.message.chat.first_name, update.message.text)
         # do a global formatting first
         corrected = []
-        for f, name in [ (text_process.format_punctuations, "punctuations"),
-                         (text_process.format_numbers, "numbers / English") ]:
+        for f, name in [ (text_process.format_punctuations, "標點"),
+                         (text_process.format_numbers, "數字英文") ]:
             input1 = f(input)
             if input1 != input:
                 input = input1
@@ -52,15 +145,18 @@ def morning_news(update, context):
         update.message.reply_text("Good Morning...")
         if corrected:
             update.message.reply_text(
-                "I see you are not being careful with {} - so I've corrected it for you:".format(
-                    ' and '.join(
-                        x for x in [', '.join(corrected[:-1]), corrected[-1]] if x
+                "發現{}小錯，糾正如下，下次努力".format(
+                    '和'.join(
+                        x for x in ['、'.join(corrected[:-1]), corrected[-1]] if x
                     )
                 )
             )
         else:
-            update.message.reply_text("Bravo! You've made no mistakes that I can spot. Here's the well formatted piece:")
-        update.message.reply_markdown_v2('```\n{}\n```'.format(formatted))
+            update.message.reply_text("Bravo! 沒發現錯誤，排版後如下")
+        update.message.reply_markdown_v2(
+            '```\n{}\n```'.format(formatted),
+            reply_markup=InlineKeyboardMarkup.from_button(InlineKeyboardButton("發佈"))
+        )
 
         out_path = generate.generate_image(post, news_items)
         update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
@@ -77,6 +173,7 @@ def main():
     import sys
     token = sys.argv[1]
     group_id = sys.argv[2]
+    chat_instance = sys.argv[3]
 
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
@@ -89,12 +186,15 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(InlineQueryHandler(inlinequery))
+    dp.add_handler(CallbackQueryHandler(mk_button(group_id, chat_instance)))
 
     # hidden switches
     dp.add_handler(CommandHandler("notify", mk_notify_command(group_id)))
 
     # on noncommand i.e morning news to process
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, morning_news))
+    # TODO deprecate
+    # dp.add_handler(MessageHandler(Filters.text & ~Filters.command, morning_news))
 
     # Start the Bot
     updater.start_polling()
