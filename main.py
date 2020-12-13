@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-import os, logging, traceback, random
+import os, logging
 from uuid import uuid4
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, InlineQueryHandler, CallbackQueryHandler
-from telegram import InlineQueryResultArticle, ParseMode, InputTextMessageContent
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
+from telegram import ParseMode
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 import gitlab
@@ -12,9 +12,14 @@ import gitlab.exceptions
 import text_read, generate, text_process, layout
 
 help="""
-[早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
-[Wiki](https://github.com/thisolddog2017/GMGL-pub/wiki)
-[報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
+*早報*
+
+```
+/zaobao 早報輸入…
+```
+\\- [早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
+\\- [Wiki](https://github.com/thisolddog2017/GMGL-pub/wiki)
+\\- [報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
 """
 
 morning_news_publish_prefix = "mnpub"
@@ -30,6 +35,15 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=os.environ.get('LOGLEVEL', 'INFO').upper())
 
 logger = logging.getLogger(__name__)
+
+def full_text_process(query):
+    processed_query = query
+    for f in [
+        text_process.format_punctuations,
+        text_process.format_numbers
+    ]:
+        processed_query = f(processed_query)
+    return processed_query
 
 def pub_to_gitlab(project, author_name, author_email, markdown_article):
     file_path = 'src/pages/article/'+markdown_article.name
@@ -62,9 +76,12 @@ def pub_to_gitlab(project, author_name, author_email, markdown_article):
     }
     commit = project.commits.create(data)
 
+def get_command_payload(text):
+    return text.split(' ', maxsplit=1)[-1].strip()
+
 def start(update, context):
     """Send a message when the command /start is issued."""
-    update.message.reply_text("Yes, I'm listening.")
+    update.message.reply_text("我是…… 算了，直接看 /help 吧")
 
 def help_command(update, context):
     """Send a message when the command /help is issued."""
@@ -73,65 +90,48 @@ def help_command(update, context):
 
 def mk_notify_command(group_id):
     def notify(update, context):
-        msg = update.message.text.split(' ', maxsplit=1)[-1].strip()
+        msg = get_command_payload(update.message.text)
         update.message.bot.send_message(group_id, msg)
     return notify
 
-def inlinequery(update, context):
-    query = update.inline_query.query
-    processed_query = query
-    # try to parse the content on the go
-    for f in [
-        text_process.format_punctuations,
-        text_process.format_numbers
-    ]:
-        processed_query = f(processed_query)
+def format_command(update, context):
+    processed_query = full_text_process(get_command_payload(update.message.text))
+    update.message.reply_text(processed_query)
 
+def mk_morning_news_command(group_id):
+    def morning_news_command(update, context):
+        processed_query = full_text_process(get_command_payload(update.message.text))
 
-    results = [
-        InlineQueryResultArticle(
-            id=uuid4(),
-            title="格式化",
-            input_message_content=InputTextMessageContent(processed_query)),
-    ]
+        # morning news
+        try:
+            post, news_items = text_read.parse(processed_query)
+            morning_news_formatted = '```\n{}\n```'.format(layout.layout_text(post, news_items))
 
-    # morning news
-    try:
-        post, news_items = text_read.parse(processed_query)
-        morning_news_formatted = '```\n{}\n```'.format(layout.layout_text(post, news_items))
-        morning_news_id = str(uuid4())
-        morning_news_pub_callback_data = '{}.{}'.format(morning_news_publish_prefix, morning_news_id)
-        morning_news_parsed[morning_news_id] = (post, news_items)
-        results.append(
-            InlineQueryResultArticle(
-                id=uuid4(),
-                title="早報",
-                input_message_content=InputTextMessageContent(
-                    morning_news_formatted,
-                    parse_mode=ParseMode.MARKDOWN_V2
-                ),
-                reply_markup=InlineKeyboardMarkup.from_button(InlineKeyboardButton(
+            kwargs={}
+            if update.message.chat.id == group_id:
+                # add publish option
+                morning_news_id = str(uuid4())
+                morning_news_pub_callback_data = '{}.{}'.format(morning_news_publish_prefix, morning_news_id)
+                morning_news_parsed[morning_news_id] = (post, news_items)
+                kwargs['reply_markup'] = InlineKeyboardMarkup.from_button(InlineKeyboardButton(
                     "發佈",
                     callback_data=morning_news_pub_callback_data
                 ))
-            ),
-        )
-    except text_read.InvalidContent as e:
-        morning_news_error = "原文\n```\n{}\n```\n{}\n\\(關於輸入格式，見 /help\\)".format(query, e)
-        results.append(
-            InlineQueryResultArticle(
-                id=uuid4(),
-                title="早報（輸入格式不符，點擊察看詳情）",
-                input_message_content=InputTextMessageContent(
-                    morning_news_error,
-                    parse_mode=ParseMode.MARKDOWN_V2
-                )
+            update.message.reply_markdown_v2(
+                morning_news_formatted,
+                **kwargs
             )
-        )
 
-    update.inline_query.answer(results)
+        except text_read.InvalidContent as e:
+            morning_news_error = """{}
+\\(關於輸入格式，見 /help\\)
+""".format(e)
+            update.message.reply_markdown_v2(
+                morning_news_error
+            )
+    return morning_news_command
 
-def handle_morning_news_publish(query, author_name, author_email, allowed_chat_instance, group_id, morning_news_id, gitlab_project):
+def handle_morning_news_publish(query, author_name, author_email, group_id, morning_news_id, gitlab_project):
     text = None
     try:
         morning_news_found = morning_news_parsed.get(morning_news_id)
@@ -141,7 +141,7 @@ def handle_morning_news_publish(query, author_name, author_email, allowed_chat_i
 
         text = layout.layout_text(post, news_items)
         # check room
-        if query.chat_instance == allowed_chat_instance:
+        if query.message.chat.id == group_id:
             # generate image
             out_path = generate.generate_image(post, news_items)
 
@@ -181,28 +181,22 @@ def handle_morning_news_publish(query, author_name, author_email, allowed_chat_i
             parse_mode=ParseMode.MARKDOWN_V2
         )
 
-def mk_button(group_id, chat_instance_id, gitlab_project):
+def mk_button(group_id, gitlab_project):
     def button(update, context):
         query = update.callback_query
         if query.data.startswith(morning_news_publish_prefix):
             author_name = query.from_user.first_name
             author_email = 'it.ngocn@gmail.com'
             morning_news_id = query.data[len(morning_news_publish_prefix)+1:]
-            handle_morning_news_publish(query, author_name, author_email, chat_instance_id, group_id, morning_news_id, gitlab_project)
+            handle_morning_news_publish(query, author_name, author_email, group_id, morning_news_id, gitlab_project)
 
-
-        query.answer()
     return button
-
-def morning_news(update, context):
-    update.message.reply_text("早報處理已升級爲聊天輸入框內操作，具體請見 /help")
 
 def main():
     import sys
     token = sys.argv[1]
-    group_id = sys.argv[2]
-    chat_instance = sys.argv[3]
-    gitlab_token = sys.argv[4]
+    group_id = int(sys.argv[2])
+    gitlab_token = sys.argv[3]
 
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
@@ -219,15 +213,12 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help_command))
-    dp.add_handler(InlineQueryHandler(inlinequery))
-    dp.add_handler(CallbackQueryHandler(mk_button(group_id, chat_instance, gitlab_project)))
+    dp.add_handler(CommandHandler("geshi", format_command))
+    dp.add_handler(CommandHandler("zaobao", mk_morning_news_command(group_id)))
+    dp.add_handler(CallbackQueryHandler(mk_button(group_id, gitlab_project)))
 
     # hidden switches
     dp.add_handler(CommandHandler("notify", mk_notify_command(group_id)))
-
-    # on noncommand i.e morning news to process
-    # TODO deprecate
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, morning_news))
 
     # Start the Bot
     updater.start_polling()
