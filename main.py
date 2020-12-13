@@ -17,9 +17,9 @@ help="""
 ```
 /zaobao 早報輸入…
 ```
-\\- [早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
-\\- [Wiki](https://github.com/thisolddog2017/GMGL-pub/wiki)
-\\- [報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
+- [早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
+- [Wiki](https://github.com/thisolddog2017/GMGL-pub/wiki)
+- [報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
 """
 
 morning_news_publish_prefix = "mnpub"
@@ -44,6 +44,13 @@ def full_text_process(query):
     ]:
         processed_query = f(processed_query)
     return processed_query
+
+def mk_telegram_msg_link(chat_id, msg_id):
+    # https://stackoverflow.com/questions/51065460/link-message-by-message-id-via-telegram-bot
+    chat_id = str(chat_id)
+    if chat_id.startswith('-'):
+        chat_id = chat_id[4:]
+    return 'https://t.me/c/{}/{}'.format(chat_id, msg_id)
 
 def pub_to_gitlab(project, author_name, author_email, markdown_article):
     file_path = 'src/pages/article/'+markdown_article.name
@@ -86,7 +93,7 @@ def start(update, context):
 def help_command(update, context):
     """Send a message when the command /help is issued."""
     # TODO support more commands
-    update.message.reply_markdown_v2(help)
+    update.message.reply_markdown(help)
 
 def mk_notify_command(group_id):
     def notify(update, context):
@@ -101,11 +108,12 @@ def format_command(update, context):
 def mk_morning_news_command(group_id):
     def morning_news_command(update, context):
         processed_query = full_text_process(get_command_payload(update.message.text))
+        processed_query_markdown = full_text_process(get_command_payload(update.message.text_markdown_urled))
 
         # morning news
         try:
-            post, news_items = text_read.parse(processed_query)
-            morning_news_formatted = '```\n{}\n```'.format(layout.layout_text(post, news_items))
+            post, news_items = text_read.parse(processed_query, content_markdown=processed_query_markdown)
+            morning_news_formatted = layout.layout_markdown_message(post, news_items)
 
             kwargs={}
             if update.message.chat.id == group_id:
@@ -117,16 +125,16 @@ def mk_morning_news_command(group_id):
                     "發佈",
                     callback_data=morning_news_pub_callback_data
                 ))
-            update.message.reply_markdown_v2(
+            update.message.reply_markdown(
                 morning_news_formatted,
                 **kwargs
             )
 
         except text_read.InvalidContent as e:
             morning_news_error = """{}
-\\(關於輸入格式，見 /help\\)
+(關於輸入格式，見 /help)
 """.format(e)
-            update.message.reply_markdown_v2(
+            update.message.reply_markdown(
                 morning_news_error
             )
     return morning_news_command
@@ -139,46 +147,44 @@ def handle_morning_news_publish(query, author_name, author_email, group_id, morn
             raise Exception("找不到該早報信息，請重新發送早報")
         post, news_items = morning_news_found
 
-        text = layout.layout_text(post, news_items)
+        text = layout.layout_markdown_message(post, news_items)
         # check room
         if query.message.chat.id == group_id:
             # generate image
             out_path = generate.generate_image(post, news_items)
 
-            query.bot.send_document(group_id, open(out_path, 'rb'))
             # publish to ngocn2
             markdown_article = layout.layout_markdown_article(post, news_items, author_name)
             pub_to_gitlab(gitlab_project, author_name, author_email, markdown_article)
 
-            query.edit_message_text(
-"""*已發佈*
+            published_message = query.message.reply_document(
+                open(out_path, 'rb'),
+                caption="""*發佈信息*
 
-\\- 圖片發送至組
-\\- 網頁（需約 15 分鐘上線）: [ngocn2](https://ngocn2.org/article/{}/)
+- 圖片見上
+- 網頁（需約 15 分鐘上線）: [ngocn2](https://ngocn2.org/article/{}/)
+""".format(markdown_article.name[:-3]),
+                parse_mode=ParseMode.MARKDOWN
+            )
 
-```
-{}
-```
-""".format(markdown_article.name[:-3], text),
-                parse_mode=ParseMode.MARKDOWN_V2
+            # remove the publish button
+            query.edit_message_reply_markup(
+                InlineKeyboardMarkup.from_button(InlineKeyboardButton(
+                    "已發佈，點擊察看信息",
+                    url=mk_telegram_msg_link(group_id, published_message.message_id)
+                ))
             )
         else:
             raise Exception("該房间無發佈權限")
     except Exception as e:
         logger.exception("Error when publishing: %r", text)
-        query.edit_message_text(
+        query.message.reply_markdown(
 """*發佈失敗*
 詳情
 ```
 {}
 ```
-
-原文
-```
-{}
-```
-""".format(e, text or "<無法獲取>"),
-            parse_mode=ParseMode.MARKDOWN_V2
+""".format(e)
         )
 
 def mk_button(group_id, gitlab_project):
@@ -189,6 +195,7 @@ def mk_button(group_id, gitlab_project):
             author_email = 'it.ngocn@gmail.com'
             morning_news_id = query.data[len(morning_news_publish_prefix)+1:]
             handle_morning_news_publish(query, author_name, author_email, group_id, morning_news_id, gitlab_project)
+        query.answer()
 
     return button
 

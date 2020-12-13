@@ -20,9 +20,17 @@ contributors:
 微信好友：njiqirenno
 """
 
+markdown_message_template = """*{title}*
+
+{body}
+"""
+
+def post_title(post):
+    return '{} N记早报'.format(post.date.strftime('%-m.%-d'))
+
 def layout_text(post, items):
     '''Layout the parsed content in the standard text form'''
-    lines = ['{} N记早报'.format(post.date.strftime('%-m.%-d'))]
+    lines = [post_title(post)]
     for i in items:
         if i.title:
             lines.append(i.title)
@@ -35,21 +43,32 @@ class MarkdownArticle:
         self.name = name
         self.content = content
 
-def layout_markdown_article(post, items, author_name):
-    '''Layout the parsed content in the markdown article format'''
+def layout_markdown_body(post, items):
     lines = []
     for i in items:
         if i.title:
-            lines.append(i.title)
+            lines.append(i.title_markdown)
         if i.content:
-            lines.append(i.content)
-    body = '\n\n'.join(lines)
+            lines.append(i.content_markdown)
+    return '\n\n'.join(lines)
+
+def layout_markdown_article(post, items, author_name):
+    '''Layout the parsed content in the markdown article format'''
+    body = layout_markdown_body(post, items)
 
     name = post.date.strftime('%Y-%m-%d-zao-bao.md')
     content = markdown_article_template.format(
-        title='{} N记早报'.format(post.date.strftime('%-m.%-d')),
+        title=post_title(post),
         date=datetime.datetime.utcnow(),
         body=body,
         author_name=author_name
     )
     return MarkdownArticle(name, content)
+
+def layout_markdown_message(post, items):
+    '''Layout the parsed content in Telegram compatible markdown format'''
+    body = layout_markdown_body(post, items)
+    return markdown_message_template.format(
+        title=post_title(post),
+        body=body,
+    )

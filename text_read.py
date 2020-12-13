@@ -35,7 +35,17 @@ class LeadingContentWithoutTitle(InvalidContent):
 
 item_line_pat = re.compile(r'([0-9]+)\.(?P<title>( .*|))$')
 
-def parse(content):
+def parse(content, content_markdown=None):
+    # TODO simpler way
+    post, items = _parse(content)
+    if content_markdown:
+        _, items_markdown = _parse(content_markdown)
+        for i, im in zip(items, items_markdown):
+            i.title_markdown = im.title
+            i.content_markdown = im.content
+    return post, items
+
+def _parse(content):
     '''Read from content string and extract the list of news
 
     Return (post, list of NewsItem)
