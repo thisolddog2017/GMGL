@@ -6,7 +6,10 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Inlin
 from telegram import InlineQueryResultArticle, ParseMode, InputTextMessageContent
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
-import text_read, generate, text_process
+import gitlab
+import gitlab.exceptions
+
+import text_read, generate, text_process, layout
 
 help="""
 [早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
@@ -14,9 +17,10 @@ help="""
 [報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
 """
 
-formatting_option_id = uuid4()
-morning_news_option_id = uuid4()
 morning_news_publish_prefix = "mnpub"
+
+# bmdvY24K/ipmp
+gitlab_project_id = 16409523
 
 # State
 morning_news_parsed = dict() # { uuid -> (post, items) }
@@ -26,6 +30,37 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=os.environ.get('LOGLEVEL', 'INFO').upper())
 
 logger = logging.getLogger(__name__)
+
+def pub_to_gitlab(project, author_name, author_email, markdown_article):
+    file_path = 'src/pages/article/'+markdown_article.name
+    # check if file already exists
+    try:
+        # TODO use HEAD request to reduce data
+        _old_file = project.files.get(file_path, ref='master')
+        action = 'update'
+    except gitlab.exceptions.GitlabGetError as e:
+        if e.response_code == 404:
+            # no such file
+            action = 'create'
+        else:
+            raise e
+
+    # See https://docs.gitlab.com/ce/api/commits.html#create-a-commit-with-multiple-files-and-actions
+    # for actions detail
+    data = {
+        'branch': 'master',
+        'commit_message': markdown_article.name,
+        'author_name': author_name,
+        'author_email': author_email,
+        'actions': [
+            {
+                'action': action,
+                'file_path': file_path,
+                'content': markdown_article.content,
+            }
+        ]
+    }
+    commit = project.commits.create(data)
 
 def start(update, context):
     """Send a message when the command /start is issued."""
@@ -55,7 +90,7 @@ def inlinequery(update, context):
 
     results = [
         InlineQueryResultArticle(
-            id=formatting_option_id,
+            id=uuid4(),
             title="格式化",
             input_message_content=InputTextMessageContent(processed_query)),
     ]
@@ -63,13 +98,13 @@ def inlinequery(update, context):
     # morning news
     try:
         post, news_items = text_read.parse(processed_query)
-        morning_news_formatted = '```\n{}\n```'.format(text_read.lay_out(post, news_items))
+        morning_news_formatted = '```\n{}\n```'.format(layout.layout_text(post, news_items))
         morning_news_id = str(uuid4())
         morning_news_pub_callback_data = '{}.{}'.format(morning_news_publish_prefix, morning_news_id)
         morning_news_parsed[morning_news_id] = (post, news_items)
         results.append(
             InlineQueryResultArticle(
-                id=morning_news_option_id,
+                id=uuid4(),
                 title="早報",
                 input_message_content=InputTextMessageContent(
                     morning_news_formatted,
@@ -85,7 +120,7 @@ def inlinequery(update, context):
         morning_news_error = "原文\n```\n{}\n```\n{}\n\\(關於輸入格式，見 /help\\)".format(query, e)
         results.append(
             InlineQueryResultArticle(
-                id=morning_news_option_id,
+                id=uuid4(),
                 title="早報（輸入格式不符，點擊察看詳情）",
                 input_message_content=InputTextMessageContent(
                     morning_news_error,
@@ -96,30 +131,64 @@ def inlinequery(update, context):
 
     update.inline_query.answer(results)
 
-def mk_button(group_id, chat_instance_id):
+def handle_morning_news_publish(query, author_name, author_email, allowed_chat_instance, group_id, morning_news_id, gitlab_project):
+    text = None
+    try:
+        morning_news_found = morning_news_parsed.get(morning_news_id)
+        if morning_news_found is None:
+            raise Exception("找不到該早報信息，請重新發送早報")
+        post, news_items = morning_news_found
+
+        text = layout.layout_text(post, news_items)
+        # check room
+        if query.chat_instance == allowed_chat_instance:
+            # generate image
+            out_path = generate.generate_image(post, news_items)
+
+            query.bot.send_document(group_id, open(out_path, 'rb'))
+            # publish to ngocn2
+            markdown_article = layout.layout_markdown_article(post, news_items, author_name)
+            pub_to_gitlab(gitlab_project, author_name, author_email, markdown_article)
+
+            query.edit_message_text(
+"""*已發佈*
+
+\\- 圖片發送至組
+\\- 網頁（需約 15 分鐘上線）: [ngocn2](https://ngocn2.org/article/{}/)
+
+```
+{}
+```
+""".format(markdown_article.name[:-3], text),
+                parse_mode=ParseMode.MARKDOWN_V2
+            )
+        else:
+            raise Exception("該房间無發佈權限")
+    except Exception as e:
+        logger.exception("Error when publishing: %r", text)
+        query.edit_message_text(
+"""*發佈失敗*
+詳情
+```
+{}
+```
+
+原文
+```
+{}
+```
+""".format(e, text or "<無法獲取>"),
+            parse_mode=ParseMode.MARKDOWN_V2
+        )
+
+def mk_button(group_id, chat_instance_id, gitlab_project):
     def button(update, context):
         query = update.callback_query
         if query.data.startswith(morning_news_publish_prefix):
+            author_name = query.from_user.first_name
+            author_email = 'it.ngocn@gmail.com'
             morning_news_id = query.data[len(morning_news_publish_prefix)+1:]
-            # TODO not found in dict
-            post, news_items = morning_news_parsed[morning_news_id]
-
-            text = text_read.lay_out(post, news_items)
-            # check room
-            if query.chat_instance == chat_instance_id:
-                out_path = generate.generate_image(post, news_items)
-
-                query.bot.send_document(group_id, open(out_path, 'rb'))
-                # update.message.reply_document(open(out_path, 'rb'), caption="...and Good Luck!")
-                query.edit_message_text(
-                    "*已發佈*\n\n```\n{}\n```".format(text),
-                    parse_mode=ParseMode.MARKDOWN_V2
-                )
-            else:
-                query.edit_message_text(
-                    "*該房间無發佈權限*\n\n```\n{}\n```".format(text),
-                    parse_mode=ParseMode.MARKDOWN_V2
-                )
+            handle_morning_news_publish(query, author_name, author_email, chat_instance_id, group_id, morning_news_id, gitlab_project)
 
 
         query.answer()
@@ -133,11 +202,16 @@ def main():
     token = sys.argv[1]
     group_id = sys.argv[2]
     chat_instance = sys.argv[3]
+    gitlab_token = sys.argv[4]
 
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
     # Post version 12 this will no longer be necessary
     updater = Updater(token, use_context=True)
+
+    gl = gitlab.Gitlab('https://gitlab.com', private_token=gitlab_token)
+
+    gitlab_project = gl.projects.get(gitlab_project_id, lazy=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
@@ -146,7 +220,7 @@ def main():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help_command))
     dp.add_handler(InlineQueryHandler(inlinequery))
-    dp.add_handler(CallbackQueryHandler(mk_button(group_id, chat_instance)))
+    dp.add_handler(CallbackQueryHandler(mk_button(group_id, chat_instance, gitlab_project)))
 
     # hidden switches
     dp.add_handler(CommandHandler("notify", mk_notify_command(group_id)))

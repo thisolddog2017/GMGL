@@ -1,3 +1,4 @@
 Pillow==6.1.0
 python-telegram-bot
 regex
+python-gitlab

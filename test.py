@@ -1,5 +1,5 @@
 import unittest, os, tempfile
-import text_read, generate, text_process
+import text_read, generate, text_process, layout
 
 test_dir = 'test'
 
@@ -33,7 +33,7 @@ def open_input_outputs(base_dir, out_ext=None, in_mode='r', out_mode='r'):
             yield i, o
 
 def full_text_process(t):
-    return apply_parsed(text_read.lay_out, t)
+    return apply_parsed(layout.layout_text, t)
 
 def gen_image(t, out_path):
     return apply_parsed(

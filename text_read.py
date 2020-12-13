@@ -111,12 +111,3 @@ def parse(content):
 
     return post, items
 
-def lay_out(post, items):
-    '''Layout the parsed content in the standard text form'''
-    lines = ['{} N记早报'.format(post.date.strftime('%-m.%-d'))]
-    for i in items:
-        if i.title:
-            lines.append(i.title)
-        if i.content:
-            lines.append(i.content)
-    return '\n\n'.join(lines)
