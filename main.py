@@ -177,7 +177,9 @@ def handle_morning_news_publish(query, author_name, author_email, group_id, morn
                     "已發佈，點擊察看信息",
                     url=mk_telegram_msg_link(group_id, published_message.message_id)
                 )),
-                disable_web_page_preview=False,
+                # still need to disable preview
+                # as webpage is not yet available
+                disable_web_page_preview=True,
                 parse_mode=ParseMode.MARKDOWN
             )
         else:
