@@ -82,6 +82,7 @@ def pub_to_gitlab(project, author_name, author_email, markdown_article):
         ]
     }
     commit = project.commits.create(data)
+    return 'https://ngocn2.org/article/{}/'.format(markdown_article.name[:-3])
 
 def get_command_payload(text):
     return text.split(' ', maxsplit=1)[-1].strip()
@@ -156,24 +157,28 @@ def handle_morning_news_publish(query, author_name, author_email, group_id, morn
 
             # publish to ngocn2
             markdown_article = layout.layout_markdown_article(post, news_items, author_name)
-            pub_to_gitlab(gitlab_project, author_name, author_email, markdown_article)
-
+            pub_url = pub_to_gitlab(gitlab_project, author_name, author_email, markdown_article)
             published_message = query.message.reply_document(
                 open(out_path, 'rb'),
                 caption="""*發佈信息*
 
 - 圖片見上
-- 網頁（需約 15 分鐘上線）: [ngocn2](https://ngocn2.org/article/{}/)
-""".format(markdown_article.name[:-3]),
+- {} 15-20 分鐘後上線
+""".format(pub_url),
                 parse_mode=ParseMode.MARKDOWN
             )
 
             # remove the publish button
-            query.edit_message_reply_markup(
-                InlineKeyboardMarkup.from_button(InlineKeyboardButton(
+            # add the webpage link
+            # turn on preview
+            query.edit_message_text(
+                '{}\n\n{}'.format(pub_url, query.message.text_markdown),
+                reply_markup=InlineKeyboardMarkup.from_button(InlineKeyboardButton(
                     "已發佈，點擊察看信息",
                     url=mk_telegram_msg_link(group_id, published_message.message_id)
-                ))
+                )),
+                disable_web_page_preview=False,
+                parse_mode=ParseMode.MARKDOWN
             )
         else:
             raise Exception("該房间無發佈權限")
