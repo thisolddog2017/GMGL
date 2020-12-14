@@ -127,6 +127,7 @@ def mk_morning_news_command(group_id):
                 ))
             update.message.reply_markdown(
                 morning_news_formatted,
+                disable_web_page_preview=True,
                 **kwargs
             )
 
