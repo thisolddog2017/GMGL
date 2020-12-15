@@ -43,18 +43,18 @@ class MarkdownArticle:
         self.name = name
         self.content = content
 
-def layout_markdown_body(post, items):
+def layout_markdown_body(post, items, title_format='*{}*'):
     lines = []
     for i in items:
         if i.title:
-            lines.append('*{}*'.format(i.title_markdown))
+            lines.append(title_format.format(i.title_markdown))
         if i.content:
             lines.append(i.content_markdown)
     return '\n\n'.join(lines)
 
 def layout_markdown_article(post, items, author_name):
     '''Layout the parsed content in the markdown article format'''
-    body = layout_markdown_body(post, items)
+    body = layout_markdown_body(post, items, title_format='**{}**')
 
     name = post.date.strftime('%Y-%m-%d-zao-bao.md')
     content = markdown_article_template.format(
