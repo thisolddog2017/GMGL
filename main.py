@@ -85,7 +85,7 @@ def pub_to_gitlab(project, author_name, author_email, markdown_article):
     return 'https://ngocn2.org/article/{}/'.format(markdown_article.name[:-3])
 
 def get_command_payload(text):
-    return text.split(' ', maxsplit=1)[-1].strip()
+    return text.split(maxsplit=1)[-1].strip()
 
 def start(update, context):
     """Send a message when the command /start is issued."""
