@@ -9,7 +9,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 import gitlab
 import gitlab.exceptions
 
-import text_read, generate, text_process, layout
+import text_read, generate, text_process, layout, markdown
 
 help="""
 *早報*
@@ -108,8 +108,15 @@ def format_command(update, context):
 
 def mk_morning_news_command(group_id):
     def morning_news_command(update, context):
-        processed_query = full_text_process(get_command_payload(update.message.text))
-        processed_query_markdown = full_text_process(get_command_payload(update.message.text_markdown_urled))
+        # first, determine the markdown input text
+        md = update.message.text_markdown_urled
+        # if there is escaped [ in the text, it means the user is already inputting markdown
+        # assumption: user is not going to input any literal [ character
+        if '\[' in md:
+            md = update.message.text
+
+        processed_query_markdown = full_text_process(get_command_payload(md))
+        processed_query = markdown.markdown_to_plaintext(processed_query_markdown)
 
         # morning news
         try:
