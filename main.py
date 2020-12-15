@@ -148,7 +148,7 @@ def mk_morning_news_command(group_id):
             )
     return morning_news_command
 
-def handle_morning_news_publish(query, author_name, author_email, group_id, morning_news_id, gitlab_project):
+def handle_morning_news_publish(query, author_name, author_email, publisher_name, group_id, morning_news_id, gitlab_project):
     text = None
     try:
         morning_news_found = morning_news_parsed.get(morning_news_id)
@@ -169,9 +169,16 @@ def handle_morning_news_publish(query, author_name, author_email, group_id, morn
                 open(out_path, 'rb'),
                 caption="""*發佈信息*
 
+*作者*：{author}
+*發佈人*：{publisher}
+
 - 圖片見上
-- {} 15-20 分鐘後上線
-""".format(pub_url),
+- {pub_url} 15-20 分鐘後上線
+""".format(
+                    pub_url=pub_url,
+                    author=author_name,
+                    publisher=publisher_name,
+                ),
                 parse_mode=ParseMode.MARKDOWN
             )
 
@@ -206,10 +213,14 @@ def mk_button(group_id, gitlab_project):
     def button(update, context):
         query = update.callback_query
         if query.data.startswith(morning_news_publish_prefix):
-            author_name = query.from_user.first_name
+            publisher_name = query.from_user.first_name
+            if query.message.reply_to_message:
+                author_name = query.message.reply_to_message.from_user.first_name
+            else:
+                author_name = publisher_name
             author_email = 'it.ngocn@gmail.com'
             morning_news_id = query.data[len(morning_news_publish_prefix)+1:]
-            handle_morning_news_publish(query, author_name, author_email, group_id, morning_news_id, gitlab_project)
+            handle_morning_news_publish(query, author_name, author_email, publisher_name, group_id, morning_news_id, gitlab_project)
         query.answer()
 
     return button
