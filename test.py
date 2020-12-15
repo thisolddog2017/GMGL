@@ -1,10 +1,11 @@
 import unittest, os, tempfile
-import text_read, generate, text_process, layout
+import text_read, generate, text_process, layout, markdown
 
 test_dir = 'test'
 
 test_text_dir = os.path.join(test_dir, 'text')
 test_img_dir = os.path.join(test_dir, 'img')
+test_md_dir = os.path.join(test_dir, 'md')
 
 def apply_parsed(func, t):
     for f in [ text_process.format_punctuations,
@@ -55,6 +56,11 @@ class TestImages(unittest.TestCase):
                 gen_image(i.read(), tf.name)
                 self.assertEqual(tf.read(), o.read())
 
+class TestMarkdown(unittest.TestCase):
+    def test_samples(self):
+        for i, o in open_input_outputs(test_md_dir):
+            self.assertEqual(markdown.markdown_to_plaintext(i.read()), o.read())
+
 if __name__ == '__main__':
     import sys
     if sys.argv[1:] == ['gen']:
@@ -63,5 +69,9 @@ if __name__ == '__main__':
 
         for i, o in open_input_outputs(test_img_dir, '.png', out_mode='wb'):
             gen_image(i.read(), o.name)
+
+        for i, o in open_input_outputs(test_md_dir, out_mode='w'):
+            o.write(markdown.markdown_to_plaintext(i.read()))
+
     else:
         unittest.main(verbosity=2)
