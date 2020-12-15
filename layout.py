@@ -47,7 +47,7 @@ def layout_markdown_body(post, items):
     lines = []
     for i in items:
         if i.title:
-            lines.append(i.title_markdown)
+            lines.append('*{}*'.format(i.title_markdown))
         if i.content:
             lines.append(i.content_markdown)
     return '\n\n'.join(lines)
