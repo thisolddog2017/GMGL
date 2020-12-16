@@ -14,9 +14,8 @@ import text_read, generate, text_process, layout, markdown
 help="""
 *早報*
 
-```
 /zaobao 早報輸入…
-```
+
 - [早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
 - [Wiki](https://github.com/thisolddog2017/GMGL-pub/wiki)
 - [報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
