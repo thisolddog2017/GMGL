@@ -5,33 +5,40 @@
 
 import re
 from NewsItem import NewsItem
+import markdown
 
 class InvalidContent(ValueError):
     def __init__(self, line=''):
         self.line = line
     def quote_msg(self, msg):
-        return '\n'.join([
-            msg,
-            '```',
-            self.line,
-            '```'
-        ])
+        if self.line:
+            return '\n'.join([
+                msg,
+                '```',
+                self.line,
+                '```'
+            ])
+        return msg
 
 class EmptyTitle(InvalidContent):
     def __str__(self):
         return self.quote_msg("新聞標題不能爲空")
 
+class TitleWithFormats(InvalidContent):
+    def __str__(self):
+        return self.quote_msg("新聞標題不能內置鏈接或格式")
+
 class EmptyInput(InvalidContent):
     def __str__(self):
-        return "無輸入？"
+        return "無早報輸入？"
 
 class NoItems(InvalidContent):
     def __str__(self):
-        return "無新聞？"
+        return "無早報新聞？"
 
 class LeadingContentWithoutTitle(InvalidContent):
     def __str__(self):
-        return self.quote_msg("新聞段落未加標題")
+        return self.quote_msg("未找到新聞標題——是否有放置加上數字的小標題？")
 
 item_line_pat = re.compile(r'([0-9]+)\.(?P<title>( .*|))$')
 
@@ -92,6 +99,8 @@ def _parse(content):
             title = m.group('title').strip()
             if not title:
                 raise EmptyTitle(line)
+            if markdown.markdown_to_plaintext(title) != title:
+                raise TitleWithFormats(line)
             current_item_title = title
             current_item_content_lines = []
         else:

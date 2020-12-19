@@ -84,7 +84,11 @@ def pub_to_gitlab(project, author_name, author_email, markdown_article):
     return 'https://ngocn2.org/article/{}/'.format(markdown_article.name[:-3])
 
 def get_command_payload(text):
-    return text.split(maxsplit=1)[-1].strip()
+    splits = text.split(maxsplit=1)
+    if len(splits) < 2:
+        # no content!
+        return ""
+    return splits[-1].strip()
 
 def start(update, context):
     """Send a message when the command /start is issued."""
@@ -107,18 +111,20 @@ def format_command(update, context):
 
 def mk_morning_news_command(group_id):
     def morning_news_command(update, context):
-        # first, determine the markdown input text
-        md = update.message.text_markdown_urled
-        # if there is escaped [ in the text, it means the user is already inputting markdown
-        # assumption: user is not going to input any literal [ character
-        if '\[' in md:
-            md = update.message.text
-
-        processed_query_markdown = full_text_process(get_command_payload(md))
-        processed_query = markdown.markdown_to_plaintext(processed_query_markdown)
-
         # morning news
         try:
+            # first, determine the markdown input text
+            md = update.message.text_markdown_urled
+            logger.info('%r', md)
+            # if there is escaped [ in the text, it means the user is already inputting markdown
+            # assumption: user is not going to input any literal [ character
+            if '\[' in md:
+                md = update.message.text
+
+            processed_query_markdown = full_text_process(get_command_payload(md))
+            processed_query = markdown.markdown_to_plaintext(processed_query_markdown)
+
+
             post, news_items = text_read.parse(processed_query, content_markdown=processed_query_markdown)
             morning_news_formatted = layout.layout_markdown_message(post, news_items)
 
@@ -144,6 +150,21 @@ def mk_morning_news_command(group_id):
 """.format(e)
             update.message.reply_markdown(
                 morning_news_error
+            )
+        except Exception as e:
+            logger.exception("Error when processing morning news: %r", update)
+            query.message.reply_markdown(
+"""*早報處理失敗*
+詳情
+```
+{}
+```
+
+問題排除：
+
+- 是否已確認沒有字段有超過一個 Telegram 附加格式（如鏈接部分加粗將出錯）？
+- 是否已察看 /help 中的早報輸入格式文檔？
+""".format(e)
             )
     return morning_news_command
 
