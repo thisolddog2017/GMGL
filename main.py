@@ -153,7 +153,7 @@ def mk_morning_news_command(group_id):
             )
         except Exception as e:
             logger.exception("Error when processing morning news: %r", update)
-            query.message.reply_markdown(
+            update.message.reply_markdown(
 """*早報處理失敗*
 詳情
 ```
