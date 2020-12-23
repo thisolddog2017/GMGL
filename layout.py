@@ -17,7 +17,7 @@ contributors:
 
 欢迎加入NGOCN的Telegram频道：ngocn01
 
-微信好友：njiqirenno
+微信好友：njiqirenno2
 """
 
 markdown_message_template = """*{title}*
