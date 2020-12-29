@@ -73,9 +73,7 @@ def _parse(content):
         lines.pop(0)
     else:
         from datetime import datetime, timezone, timedelta
-        date = datetime.today().replace(tzinfo=timezone.utc).astimezone(
-            tz=timezone(timedelta(hours=8))
-        )
+        date = datetime.now().replace(tzinfo=timezone.utc).astimezone(tz=timezone(timedelta(hours=8))).date()
 
     from NewsPost import NewsPost
     post = NewsPost()

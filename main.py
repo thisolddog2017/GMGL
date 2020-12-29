@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os, logging
-from uuid import uuid4
+import datetime
 
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 from telegram import ParseMode
@@ -27,13 +27,31 @@ morning_news_publish_prefix = "mnpub"
 gitlab_project_id = 16409523
 
 # State
-morning_news_parsed = dict() # { uuid -> (post, items) }
+morning_news_parsed = dict() # { date -> (post, items) }
+morning_news_published = dict() # { date -> MorningNewsPublished }
 
 # Enable logging
+log_level = os.environ.get('LOGLEVEL', 'INFO').upper()
+debug_only = bool(os.environ.get('DEBUGONLY', False))
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=os.environ.get('LOGLEVEL', 'INFO').upper())
+                    level=log_level)
 
 logger = logging.getLogger(__name__)
+
+def morning_news_date_prefix(date):
+    return date.strftime('%Y%m%d')
+
+def parse_morning_news_date_prefix(prefix):
+    return datetime.datetime.strptime(prefix, '%Y%m%d').date()
+
+class MorningNewsPublished(object):
+    def __init__(self, channel_id, channel_message_id):
+        self.channel_id = channel_id
+        self.channel_message_id = channel_message_id
+
+    @property
+    def channel_message_url(self):
+        return mk_telegram_channel_msg_link(self.channel_id, self.channel_message_id)
 
 def full_text_process(query):
     processed_query = query
@@ -51,7 +69,16 @@ def mk_telegram_msg_link(chat_id, msg_id):
         chat_id = chat_id[4:]
     return 'https://t.me/c/{}/{}'.format(chat_id, msg_id)
 
+def mk_telegram_channel_target(channel_id):
+    return '@' + channel_id
+
+def mk_telegram_channel_msg_link(channel_id, channel_message_id):
+    return 'https://t.me/{}/{}'.format(channel_id, channel_message_id)
+
 def pub_to_gitlab(project, author_name, author_email, markdown_article):
+    if debug_only:
+        return 'NOT-PUBLISHED-TO-GITLAB'
+
     file_path = 'src/pages/article/'+markdown_article.name
     # check if file already exists
     try:
@@ -131,11 +158,11 @@ def mk_morning_news_command(group_id):
             kwargs={}
             if update.message.chat.id == group_id:
                 # add publish option
-                morning_news_id = str(uuid4())
-                morning_news_pub_callback_data = '{}.{}'.format(morning_news_publish_prefix, morning_news_id)
-                morning_news_parsed[morning_news_id] = (post, news_items)
+                prefix = morning_news_date_prefix(post.date)
+                morning_news_pub_callback_data = '{}.{}'.format(morning_news_publish_prefix, prefix)
+                morning_news_parsed[post.date] = (post, news_items)
                 kwargs['reply_markup'] = InlineKeyboardMarkup.from_button(InlineKeyboardButton(
-                    "發佈",
+                    "重新發佈（更新）" if post.date in morning_news_published else "發佈",
                     callback_data=morning_news_pub_callback_data
                 ))
             update.message.reply_markdown(
@@ -155,7 +182,7 @@ def mk_morning_news_command(group_id):
             logger.exception("Error when processing morning news: %r", update)
             update.message.reply_markdown(
 """*早報處理失敗*
-詳情
+
 ```
 {}
 ```
@@ -168,12 +195,12 @@ def mk_morning_news_command(group_id):
             )
     return morning_news_command
 
-def handle_morning_news_publish(query, author_name, author_email, publisher_name, group_id, morning_news_id, gitlab_project):
+def handle_morning_news_publish(query, channel_id, author_name, author_email, publisher_name, group_id, morning_news_date, gitlab_project):
     text = None
     try:
-        morning_news_found = morning_news_parsed.get(morning_news_id)
+        morning_news_found = morning_news_parsed.get(morning_news_date)
         if morning_news_found is None:
-            raise Exception("找不到該早報信息，請重新發送早報")
+            raise Exception("該早報信息已過期")
         post, news_items = morning_news_found
 
         text = layout.layout_markdown_message(post, news_items)
@@ -185,19 +212,50 @@ def handle_morning_news_publish(query, author_name, author_email, publisher_name
             # publish to ngocn2
             markdown_article = layout.layout_markdown_article(post, news_items, author_name)
             pub_url = pub_to_gitlab(gitlab_project, author_name, author_email, markdown_article)
-            published_message = query.message.reply_document(
+            # publish to tg channel
+            tg_markdown_msg = '{}\n\n{}'.format(pub_url, text)
+            # check if we already published before
+            published = morning_news_published.get(post.date)
+            if published is None:
+                tg_channel_msg = query.bot.send_message(
+                    mk_telegram_channel_target(channel_id),
+                    tg_markdown_msg,
+                    parse_mode=ParseMode.MARKDOWN,
+                    disable_web_page_preview=True
+                )
+                published = MorningNewsPublished(
+                    channel_id,
+                    tg_channel_msg.message_id
+                )
+            else:
+                tg_channel_msg = query.bot.edit_message_text(
+                    tg_markdown_msg,
+                    mk_telegram_channel_target(published.channel_id),
+                    published.channel_message_id,
+                    parse_mode=ParseMode.MARKDOWN,
+                    disable_web_page_preview=True
+                )
+                published = MorningNewsPublished(
+                    published.channel_id,
+                    tg_channel_msg.message_id
+                )
+            morning_news_published[post.date] = published
+
+            published_msg = query.message.reply_document(
                 open(out_path, 'rb'),
                 caption="""*發佈信息*
 
 *作者*：{author}
 *發佈人*：{publisher}
 
-- 圖片見上
-- {pub_url} 15-20 分鐘後上線
+- 圖片: 見上
+- TG: {channel_pub_url}
+- 網頁: {pub_url} 15-20 分鐘後上線
 """.format(
                     pub_url=pub_url,
                     author=author_name,
                     publisher=publisher_name,
+                    channel_pub_url=published.channel_message_url,
                 ),
                 parse_mode=ParseMode.MARKDOWN
             )
@@ -206,10 +264,10 @@ def handle_morning_news_publish(query, author_name, author_email, publisher_name
             # add the webpage link
             # turn on preview
             query.edit_message_text(
-                '{}\n\n{}'.format(pub_url, query.message.text_markdown),
+                tg_markdown_msg,
                 reply_markup=InlineKeyboardMarkup.from_button(InlineKeyboardButton(
                     "已發佈，點擊察看信息",
-                    url=mk_telegram_msg_link(group_id, published_message.message_id)
+                    url=mk_telegram_msg_link(group_id, published_msg.message_id)
                 )),
                 # still need to disable preview
                 # as webpage is not yet available
@@ -222,14 +280,14 @@ def handle_morning_news_publish(query, author_name, author_email, publisher_name
         logger.exception("Error when publishing: %r", text)
         query.message.reply_markdown(
 """*發佈失敗*
-詳情
+
 ```
 {}
 ```
 """.format(e)
         )
 
-def mk_button(group_id, gitlab_project):
+def mk_button(channel_id, group_id, gitlab_project):
     def button(update, context):
         query = update.callback_query
         if query.data.startswith(morning_news_publish_prefix):
@@ -239,8 +297,8 @@ def mk_button(group_id, gitlab_project):
             else:
                 author_name = publisher_name
             author_email = 'it.ngocn@gmail.com'
-            morning_news_id = query.data[len(morning_news_publish_prefix)+1:]
-            handle_morning_news_publish(query, author_name, author_email, publisher_name, group_id, morning_news_id, gitlab_project)
+            morning_news_date = parse_morning_news_date_prefix(query.data[len(morning_news_publish_prefix)+1:])
+            handle_morning_news_publish(query, channel_id, author_name, author_email, publisher_name, group_id, morning_news_date, gitlab_project)
         query.answer()
 
     return button
@@ -250,6 +308,10 @@ def main():
     token = sys.argv[1]
     group_id = int(sys.argv[2])
     gitlab_token = sys.argv[3]
+    channel_id = sys.argv[4] # channelusername
+
+    if debug_only:
+        print("DEBUG ONLY!")
 
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
@@ -268,7 +330,7 @@ def main():
     dp.add_handler(CommandHandler("help", help_command))
     dp.add_handler(CommandHandler("geshi", format_command))
     dp.add_handler(CommandHandler("zaobao", mk_morning_news_command(group_id)))
-    dp.add_handler(CallbackQueryHandler(mk_button(group_id, gitlab_project)))
+    dp.add_handler(CallbackQueryHandler(mk_button(channel_id, group_id, gitlab_project)))
 
     # hidden switches
     dp.add_handler(CommandHandler("notify", mk_notify_command(group_id)))
