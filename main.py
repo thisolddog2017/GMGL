@@ -22,6 +22,7 @@ help="""
 """
 
 morning_news_publish_prefix = "mnpub"
+morning_news_publish_cancel_prefix = "mncancel"
 
 # bmdvY24K/ipmp
 gitlab_project_id = 16409523
@@ -43,6 +44,12 @@ def morning_news_date_prefix(date):
 
 def parse_morning_news_date_prefix(prefix):
     return datetime.datetime.strptime(prefix, '%Y%m%d').date()
+
+def mk_callback_data(prefices):
+    return '.'.join(prefices)
+
+def split_callback_data(data):
+    return data.split('.')
 
 class MorningNewsPublished(object):
     def __init__(self, channel_id, channel_message_id):
@@ -158,8 +165,8 @@ def mk_morning_news_command(group_id):
             kwargs={}
             if update.message.chat.id == group_id:
                 # add publish option
-                prefix = morning_news_date_prefix(post.date)
-                morning_news_pub_callback_data = '{}.{}'.format(morning_news_publish_prefix, prefix)
+                date_prefix = morning_news_date_prefix(post.date)
+                morning_news_pub_callback_data = mk_callback_data([morning_news_publish_prefix, date_prefix])
                 morning_news_parsed[post.date] = (post, news_items)
                 kwargs['reply_markup'] = InlineKeyboardMarkup.from_button(InlineKeyboardButton(
                     "重新發佈（更新）" if post.date in morning_news_published else "發佈",
@@ -290,15 +297,44 @@ def handle_morning_news_publish(query, channel_id, author_name, author_email, pu
 def mk_button(channel_id, group_id, gitlab_project):
     def button(update, context):
         query = update.callback_query
-        if query.data.startswith(morning_news_publish_prefix):
+        prefices = split_callback_data(query.data)
+        if prefices[0] == morning_news_publish_prefix and len(prefices) > 1:
+            morning_news_date = parse_morning_news_date_prefix(prefices[1])
+            publisher_name_confirmed = None
+            if len(prefices) > 2:
+                publisher_name_confirmed = prefices[2]
             publisher_name = query.from_user.first_name
-            if query.message.reply_to_message:
-                author_name = query.message.reply_to_message.from_user.first_name
+            if publisher_name_confirmed == publisher_name:
+                if query.message.reply_to_message:
+                    author_name = query.message.reply_to_message.from_user.first_name
+                else:
+                    author_name = publisher_name
+                author_email = 'it.ngocn@gmail.com'
+                handle_morning_news_publish(query, channel_id, author_name, author_email, publisher_name, group_id, morning_news_date, gitlab_project)
+            elif publisher_name_confirmed == morning_news_publish_cancel_prefix:
+                # cancel the confirmation
+                query.edit_message_reply_markup(
+                    InlineKeyboardMarkup.from_button(
+                        InlineKeyboardButton(
+                            "重新發佈（更新）" if morning_news_date in morning_news_published else "發佈",
+                            callback_data=mk_callback_data(prefices[:2])
+                        ),
+                    )
+                )
             else:
-                author_name = publisher_name
-            author_email = 'it.ngocn@gmail.com'
-            morning_news_date = parse_morning_news_date_prefix(query.data[len(morning_news_publish_prefix)+1:])
-            handle_morning_news_publish(query, channel_id, author_name, author_email, publisher_name, group_id, morning_news_date, gitlab_project)
+                # prompt the confirmation
+                query.edit_message_reply_markup(
+                    InlineKeyboardMarkup.from_row([
+                        InlineKeyboardButton(
+                            "確認發佈（{}）".format(publisher_name),
+                            callback_data=mk_callback_data(prefices[:2] + [publisher_name])
+                        ),
+                        InlineKeyboardButton(
+                            "取消",
+                            callback_data=mk_callback_data(prefices[:2] + [morning_news_publish_cancel_prefix])
+                        ),
+                    ])
+                )
         query.answer()
 
     return button
