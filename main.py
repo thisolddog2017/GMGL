@@ -115,9 +115,7 @@ def pub_to_gitlab(project, author_name, author_email, markdown_article):
         ]
     }
     commit = project.commits.create(data)
-    # URL currently unavailable
-    return None
-    # return 'https://ngocn2.org/article/{}/'.format(markdown_article.name[:-3])
+    return 'https://ngocn2.org/article/{}/'.format(markdown_article.name[:-3])
 
 def get_command_payload(text):
     splits = text.split(maxsplit=1)
