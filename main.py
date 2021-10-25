@@ -223,7 +223,7 @@ def handle_morning_news_publish(query, channel_id, author_name, author_email, pu
             if pub_url is None:
                 tg_markdown_msg = text
             else:
-                tg_markdown_msg = '{}\n\n{}'.format(pub_url, text)
+                tg_markdown_msg = '{}\n\n{}'.format(text, pub_url)
             # check if we already published before
             published = morning_news_published.get(post.date)
             if published is None:
