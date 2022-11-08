@@ -16,7 +16,11 @@ Since your server will be holding the auth details, make sure it's secured and c
 
 # Development
 
+Development on this project uses standard pull request workflow i.e., you work on your own fork and then make a pull request. If you want to become a maintainer, you need to contact the current maintainer and let he add you into the project.
+
 Always run tests for small or big changes. For big changes, it's recommended to use your own Telegram bot instance (see second section below).
+
+*Note tests are automatically run in Github Action on pull requests & pushes.*
 
 ## Tests
 
