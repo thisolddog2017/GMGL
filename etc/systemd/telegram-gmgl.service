@@ -1,0 +1,17 @@
+[Unit]
+Description=GMGL
+
+[Service]
+# Environment=LOGLEVEL=DEBUG
+LimitNOFILE=100000
+ExecStart=/usr/bin/python3 main.py '<TOKEN>' '<GROUP-ID>' '<GITLAB-TOKEN>' '<CHANNEL-ID>'
+WorkingDirectory=<GMGL-WORKING-DIR>
+StandardOutput=journal
+User=<YOUR-USERNAME>
+Group=<YOUR-GROUPNAME>
+Restart=always
+RestartSec=5
+SyslogIdentifier=telegram-gmgl
+
+[Install]
+WantedBy=multi-user.target
