@@ -16,8 +16,6 @@ contributors:
 {body}
 
 欢迎加入NGOCN的Telegram频道：ngocn01
-
-微信好友：njiqirenno2
 """
 
 markdown_message_template = """*{title}*
@@ -26,7 +24,7 @@ markdown_message_template = """*{title}*
 """
 
 def post_title(post):
-    return '{} N记早报'.format(post.date.strftime('%-m.%-d'))
+    return '{} N记日报'.format(post.date.strftime('%-m.%-d'))
 
 def layout_text(post, items):
     '''Layout the parsed content in the standard text form'''

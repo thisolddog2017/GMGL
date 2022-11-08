@@ -12,11 +12,11 @@ import gitlab.exceptions
 import text_read, generate, text_process, layout, markdown
 
 help="""
-*早報*
+*日報*
 
-/zaobao 早報輸入…
+/zaobao 日報輸入…
 
-- [早報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
+- [日報輸入格式](https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F)
 - [Wiki](https://github.com/thisolddog2017/GMGL-pub/wiki)
 - [報告 Issue](https://github.com/thisolddog2017/GMGL-pub/issues)
 """
@@ -188,7 +188,7 @@ def mk_morning_news_command(group_id):
         except Exception as e:
             logger.exception("Error when processing morning news: %r", update)
             update.message.reply_markdown(
-"""*早報處理失敗*
+"""*日報處理失敗*
 
 ```
 {}
@@ -197,7 +197,7 @@ def mk_morning_news_command(group_id):
 問題排除：
 
 - 是否已確認沒有字段有超過一個 Telegram 附加格式（如鏈接部分加粗將出錯）？
-- 是否已察看 /help 中的早報輸入格式文檔？
+- 是否已察看 /help 中的日報輸入格式文檔？
 """.format(e)
             )
     return morning_news_command
@@ -207,7 +207,7 @@ def handle_morning_news_publish(query, channel_id, author_name, author_email, pu
     try:
         morning_news_found = morning_news_parsed.get(morning_news_date)
         if morning_news_found is None:
-            raise Exception("該早報信息已過期")
+            raise Exception("該日報信息已過期")
         post, news_items = morning_news_found
 
         text = layout.layout_markdown_message(post, news_items)

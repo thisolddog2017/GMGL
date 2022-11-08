@@ -145,7 +145,7 @@ def generate_image(post, news_item_list, out_path=None):
 
     images.append(footer_image_path)
     if out_path is None:
-        out_path = "{}/早报{}.png".format(
+        out_path = "{}/日报{}.png".format(
             cfg['out_dir'],
             post.date.strftime("%Y.%m.%d")
         )

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-早報輸入格式: https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F
+日報輸入格式: https://github.com/thisolddog2017/GMGL-pub/wiki/%E6%97%A9%E5%A0%B1%E8%BC%B8%E5%85%A5%E6%A0%BC%E5%BC%8F
 """
 
 import re
@@ -30,11 +30,11 @@ class TitleWithFormats(InvalidContent):
 
 class EmptyInput(InvalidContent):
     def __str__(self):
-        return "無早報輸入？"
+        return "無日報輸入？"
 
 class NoItems(InvalidContent):
     def __str__(self):
-        return "無早報新聞？"
+        return "無日報新聞？"
 
 class LeadingContentWithoutTitle(InvalidContent):
     def __str__(self):
