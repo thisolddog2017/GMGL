@@ -51,10 +51,16 @@ class TestTextProcess(unittest.TestCase):
 
 class TestImages(unittest.TestCase):
     def test_samples(self):
+        from PIL import Image
+        from PIL import ImageChops
         for i, o in open_input_outputs(test_img_dir, '.png', out_mode='rb'):
             with tempfile.NamedTemporaryFile(suffix='.png') as tf:
                 gen_image(i.read(), tf.name)
-                self.assertEqual(tf.read(), o.read())
+                # https://stackoverflow.com/a/56280735
+                self.assertFalse(
+                    ImageChops.difference(Image.open(tf), Image.open(o)).getbbox(),
+                    "Generated image different from {}".format(o.name)
+                )
 
 class TestMarkdown(unittest.TestCase):
     def test_samples(self):
